@@ -17,7 +17,6 @@ using System.Reflection;
 
 namespace OATBeanCounter
 {
-
 	/// <summary>
 	/// KSPAddon with equality checking using an additional type parameter.
 	/// Fixes the issue where AddonLoader prevents multiple start-once addons
@@ -147,7 +146,8 @@ namespace OATBeanCounter
 			
 			if (!minimize) // not minimized, show windows
 			{
-				mainWin = GUILayout.Window(MAINWINID, mainWin, drawBCWindow, "Bean Counter Window", GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
+				GUI.skin = GUI.skin;
+				mainWin = GUILayout.Window(MAINWINID, mainWin, drawBCWindow, "BC Window", GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
 			}
 		}
 		
@@ -160,18 +160,17 @@ namespace OATBeanCounter
 		
 		private void drawBCWindow(int windowID)
 		{
-			
 			// Draw a window 
 			GUIStyle BCStyle = new GUIStyle(GUI.skin.window);
-			BCStyle.fontStyle = FSGlobal;
-			BCStyle.alignment = TextAnchor.UpperLeft;
-			BCStyle.normal.textColor = ACol;
+			// BCStyle.fontStyle = FSGlobal;
+			// BCStyle.alignment = TextAnchor.UpperLeft;
+			// BCStyle.normal.textColor = ACol;
 			
 			GUILayout.BeginVertical();
-			GUILayout.Label("Bean Counter!", BCStyle, GUILayout.ExpandWidth(true));
+			GUILayout.Label("Bean Counter!");
 			foreach (Part part in parts) {
-				string partname = part.ClassName;
-				GUILayout.Label(partname, BCStyle, GUILayout.ExpandWidth(true));
+				string partname = part.name;
+				GUILayout.Button(partname);
 			}
 			GUILayout.EndVertical();
 			
@@ -184,9 +183,43 @@ namespace OATBeanCounter
         {
             get
             {
-                return (HighLogic.LoadedSceneIsEditor) ? EditorLogic.SortedShipList : 
-                    new List<Part>();
+            	if (HighLogic.LoadedSceneIsEditor) {
+            		List<Part> parts = EditorLogic.fetch.ship.parts;
+            		if (parts != null
+            			&& parts.Count > 0) {
+            			return parts;
+            		} else {
+            			return new List<Part>();
+            		}
+            	}
+
+                return new List<Part>();
             }
         }
+
+		public static void var_dump(object obj)   
+		{
+			Debug.Log(String.Format("{0,-18} {1}", "Name", "Value"));
+			string ln = @"-------------------------------------
+				----------------------------";   
+			Debug.Log(ln);   
+			  
+			Type t = obj.GetType();   
+			PropertyInfo[] props = t.GetProperties();   
+			  
+			for(int i = 0; i < props.Length; i++)   
+			{   
+				try   
+				{   
+					Debug.Log(String.Format("{0,-18} {1}",   
+						props[i].Name, props[i].GetValue(obj, null)));
+				}   
+				catch(Exception e)   
+				{   
+					//Debug.Log(e);   
+				}   
+			}   
+			Debug.Log(""); 
+		}
 	}
 }
