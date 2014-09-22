@@ -17,165 +17,84 @@ using System.Reflection;
 
 namespace OATBeanCounter
 {
-	/// <summary>
-	/// KSPAddon with equality checking using an additional type parameter.
-	/// Fixes the issue where AddonLoader prevents multiple start-once addons
-	/// with the same start scene.
-	/// </summary>
-	public class KSPAddonFixed : KSPAddon, IEquatable<KSPAddonFixed>
-	{
-		private readonly Type type;
-		
-		public KSPAddonFixed(KSPAddon.Startup startup, bool once, Type type)
-			: base(startup, once)
-		{
-			this.type = type;
-		}
-		
-		public override bool Equals(object obj) {
-			if (obj.GetType() != this.GetType()) { return false; }
-			return Equals((KSPAddonFixed)obj);
-		}
-		
-		public bool Equals(KSPAddonFixed other)
-		{
-			if (this.once != other.once) { return false; }
-			if (this.startup != other.startup) { return false; }
-			if (this.type != other.type) { return false; }
-			return true;
-		}
-		
-		public override int GetHashCode()
-		{
-			return this.startup.GetHashCode() ^ this.once.GetHashCode() ^ this.type.GetHashCode();
-		}
-	}
-
-	[KSPAddonFixed(KSPAddon.Startup.MainMenu, true, typeof(BeanCounter))]
+	[KSPAddon(KSPAddon.Startup.EditorAny, false)]
 	public class BeanCounter : KSPPluginFramework.MonoBehaviourExtended
 	{
 		private static String VERSION = "0.01";  // Current version
-		private const int MAINWINID = 1801;  // Main window ID
-		
-		// Config file
-		private static PluginConfiguration BCConfig = null;
-		
-		// Main window eidth and height
-		private static int mainWidth = 120;
-		private static int mainHeight = 10;
-		
-		// Main window position and size
-		private Rect mainWin = new Rect(Screen.width / 2, Screen.height / 4, mainWidth, mainHeight);  
-		
-		private bool minimize = false;
-		private bool doOneFrame = false;
-		private bool f2pressed = false;
-		
-		private static double sumDelta = 0;
-		
-		private static FontStyle FSGlobal = FontStyle.Normal;
-		private static Color ACol = Color.red;
+
+		private BCEditorWindow editorWindow;
 
 		internal override void Awake()
 		{
-			DontDestroyOnLoad(this);
+            editorWindow = gameObject.AddComponent<BCEditorWindow>();
 
-			base.Awake();
+            RenderingManager.AddToPostDrawQueue(1, DrawGUI);
 		}
 		
 		private void OnApplicationQuit()
 		{
-			// Save configuration file
-			saveConfig();
+			LogFormatted_DebugOnly("OnApplicationQuit()");
 		}
 		
 		internal override void Start()
 		{
 			// TODO Config file stuff will probably go here
 			
-			Debug.Log("BeanCounter: Start() executed");
-
-			base.Start ();
+			LogFormatted("Start() executed");
 		}
 		
 		internal override void Update()
 		{
-			if (Input.GetKeyDown(KeyCode.F2))
-				f2pressed = !f2pressed;
-			
-			// Some example code to only update cals 3 times per second
-			sumDelta += Time.deltaTime;
-			if (sumDelta > 0.33)
+			if(EditorLogic.fetch != null)
 			{
-				doOneFrame = true;
-				sumDelta = 0;
+				editorWindow.Visible = true;
 			}
+		}
 
-			base.Update ();
-		}
-		
-		// TODO this whole thing is copied from a tutorial script
-		// replace with whatever makes sense
-		private void OnGUI()
+		void DrawGUI()
 		{
-			if (f2pressed) {
-				return;  // clear the GUI for screenies
-			}
-			
-			if (FlightGlobals.fetch != null && FlightGlobals.ActiveVessel != null)  // Check if in flight
-			{
-				if (FlightGlobals.ActiveVessel.isEVA) // EVA kerbal, do nothing
-					return;
-				// do_flight_mode_stuff
-			}
-			else if (EditorLogic.fetch != null) // Check if in editor
-			{
-				// do editor stuff
-			}
-			else // Not in flight, in editor or F2 pressed unset the mode and return
-			{
-				// skip this scene
-				return;
-			}
-			
-			if (doOneFrame && !minimize)
-			{
-				doOneFrame = !doOneFrame;
-				// do calcs etc, 3 per second
-			}
-			
-			if (!minimize) // not minimized, show windows
-			{
-				GUI.skin = GUI.skin;
-				mainWin = GUILayout.Window(MAINWINID, mainWin, drawBCWindow, "BC Window", GUILayout.ExpandWidth(true), GUILayout.ExpandHeight(true));
-			}
+			editorWindow.Visible = true;
 		}
-		
-		private void saveConfig()
-		{
-			// TODO: Config file should be saved here
-			// BCConfig.SetValue("version", VERSION);
-			// BCConfig.save();
-		}
-		
-		private void drawBCWindow(int windowID)
-		{
-			// Draw a window 
-			GUIStyle BCStyle = new GUIStyle(GUI.skin.window);
-			// BCStyle.fontStyle = FSGlobal;
-			// BCStyle.alignment = TextAnchor.UpperLeft;
-			// BCStyle.normal.textColor = ACol;
-			
-			GUILayout.BeginVertical();
-			GUILayout.Label("Bean Counter!");
+	}
+
+    public class BCEditorWindow : KSPPluginFramework.MonoBehaviourWindow
+    {
+    	internal override void Awake()
+    	{
+            WindowRect = new Rect(0, 0, 200, 100);
+            Visible =  true;
+            DragEnabled = true;
+            //WindowOptions[0] = GUILayout.ExpandHeight(true);
+            WindowCaption="OAT Bean Counter";
+    	}
+
+        internal override void DrawWindow(int id)
+        {
+        	float cost = parts.Sum(p => p.partInfo.cost);
+			GUILayout.Label(String.Format("Cost: {0}", cost));
 			foreach (Part part in parts) {
-				string partname = part.name;
-				GUILayout.Button(partname);
+				string partname = part.partInfo.name;
+				GUILayout.BeginVertical("box");
+				GUILayout.Label(partname);
+				if(part.Resources.Count > 0)
+				{
+					foreach(PartResource res in part.Resources)
+					{
+						if (res.info.unitCost == 0 || res.amount == 0) {
+							continue;
+						}
+						double tonnage = res.amount * res.info.density;
+						double rescost = res.amount * res.info.unitCost;
+						GUILayout.Label(String.Format("{0}: {1:f2}t (${2:f0})",
+							res.resourceName, tonnage, rescost));
+					}
+				}
+				GUILayout.EndVertical();
 			}
-			GUILayout.EndVertical();
-			
-			// Make window draggable
-			GUI.DragWindow();
+        }
+
+		internal override void Update()
+		{
 		}
 
 		// TODO: currently only works in the editor. Blank list otherwise
@@ -196,30 +115,51 @@ namespace OATBeanCounter
                 return new List<Part>();
             }
         }
+    }
+#if DEBUG
+    // Auto load the testing save when debugging
+    [KSPAddon(KSPAddon.Startup.MainMenu, false)]
+    public class Debug_AutoLoadPersistentSaveOnStartup : MonoBehaviour
+    {
+        //use this variable for first run to avoid the issue with when this is true and multiple addons use it
+        public static bool first = true;
+        public void Start()
+        {
+            //only do it on the first entry to the menu
+            if (first)
+            {
+                first = false;
+                HighLogic.SaveFolder = "BeanCounterTesting";
+                Game game = GamePersistence.LoadGame("persistent", HighLogic.SaveFolder, true, false);
 
-		public static void var_dump(object obj)   
-		{
-			Debug.Log(String.Format("{0,-18} {1}", "Name", "Value"));
-			string ln = @"-------------------------------------
-				----------------------------";   
-			Debug.Log(ln);   
-			  
-			Type t = obj.GetType();   
-			PropertyInfo[] props = t.GetProperties();   
-			  
-			for(int i = 0; i < props.Length; i++)   
-			{   
-				try   
-				{   
-					Debug.Log(String.Format("{0,-18} {1}",   
-						props[i].Name, props[i].GetValue(obj, null)));
-				}   
-				catch(Exception e)   
-				{   
-					//Debug.Log(e);   
-				}   
-			}   
-			Debug.Log(""); 
-		}
-	}
+                if (game != null && game.flightState != null && game.compatible)
+                {
+                    Int32 FirstVessel = 0;
+                    Boolean blnFoundVessel=false;
+                    // Uncomment this to load the first available vessel
+                    // for (FirstVessel = 0; FirstVessel < game.flightState.protoVessels.Count; FirstVessel++)
+                    // {
+                    //     if (game.flightState.protoVessels[FirstVessel].vesselType != VesselType.SpaceObject &&
+                    //         game.flightState.protoVessels[FirstVessel].vesselType != VesselType.Unknown)
+                    //     {
+                    //         blnFoundVessel = true;
+                    //         break;
+                    //     }
+                    // }
+					if (!blnFoundVessel)
+					{
+						FirstVessel = 0;
+						game.Start();
+					}
+					else
+					{
+                    	FlightDriver.StartAndFocusVessel(game, FirstVessel);
+					}
+                }
+
+                //CheatOptions.InfiniteFuel = true;
+            }
+        }
+    }
+#endif
 }
