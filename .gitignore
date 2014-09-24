@@ -6,6 +6,9 @@ bin/
 *.sublime-project
 *.sublime-workspace
 
+# Office temp files
+~$*
+
 
 ### OSX ###
 .DS_Store
