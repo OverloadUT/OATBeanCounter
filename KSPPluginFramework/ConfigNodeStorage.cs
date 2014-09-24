@@ -13,7 +13,7 @@ using System.Text;
 using KSP;
 using UnityEngine;
 
-namespace KSPPluginFramework
+namespace OATBeanCounter
 { 
     public abstract class ConfigNodeStorage : IPersistenceLoad, IPersistenceSave
     {

@@ -17,17 +17,47 @@ using System.Reflection;
 
 namespace OATBeanCounter
 {
-	[KSPAddon(KSPAddon.Startup.EditorAny, false)]
-	public class BeanCounter : KSPPluginFramework.MonoBehaviourExtended
+
+    [KSPAddon(KSPAddon.Startup.TrackingStation, false)]
+    public class BC_Tracking_Station : BeanCounter
+    {
+
+    }
+
+    [KSPAddon(KSPAddon.Startup.Flight, false)]
+    public class BC_Flight : BeanCounter
+    {
+
+    }
+
+    [KSPAddon(KSPAddon.Startup.SpaceCentre, false)]
+    public class BC_SpaceCenter : BeanCounter
+    {
+        
+    }
+
+    [KSPAddon(KSPAddon.Startup.EditorVAB, false)]
+    public class BC_VABEditor : BeanCounter
+    {
+
+    }
+
+    [KSPAddon(KSPAddon.Startup.EditorSPH, false)]
+    public class BC_SPHEditor : BeanCounter
+    {
+
+    }
+
+	public class BeanCounter : MonoBehaviourExtended
 	{
-		private static String VERSION = "0.01";  // Current version
+		// TODO handle versioning better
+		public static String VERSION = "0.01";  // Current version
 
 		private BCEditorWindow editorWindow;
 
 		internal override void Awake()
 		{
             editorWindow = gameObject.AddComponent<BCEditorWindow>();
-
             RenderingManager.AddToPostDrawQueue(1, DrawGUI);
 		}
 		
@@ -38,9 +68,7 @@ namespace OATBeanCounter
 		
 		internal override void Start()
 		{
-			// TODO Config file stuff will probably go here
-			
-			LogFormatted("Start() executed");
+			InitializePersistence();
 		}
 		
 		internal override void Update()
@@ -51,71 +79,72 @@ namespace OATBeanCounter
 			}
 		}
 
+		private void InitializePersistence()
+		{
+			LogFormatted_DebugOnly("InitializePersistence()");
+			ProtoScenarioModule scenario = HighLogic.CurrentGame.scenarios.Find(s => s.moduleName == typeof(OATBeanCounterData).Name);
+            if (scenario == null)
+            {
+                try
+                {
+                    LogFormatted("Scenario had no BeanCounter data - Adding to scenario '{0}'", HighLogic.CurrentGame.Title);
+                    HighLogic.CurrentGame.AddProtoScenarioModule(typeof(OATBeanCounterData), new GameScenes[] {GameScenes.FLIGHT, GameScenes.SPACECENTER, GameScenes.EDITOR, GameScenes.SPH, GameScenes.TRACKSTATION});
+                    // the game will add this scenario to the appropriate persistent file on save from now on
+                }
+                catch
+                {
+                    LogFormatted("Exception while trying to add scenario data");
+                }
+            }
+		}
+
 		void DrawGUI()
 		{
 			editorWindow.Visible = true;
 		}
 	}
 
-    public class BCEditorWindow : KSPPluginFramework.MonoBehaviourWindow
-    {
-    	internal override void Awake()
-    	{
-            WindowRect = new Rect(0, 0, 200, 100);
-            Visible =  true;
-            DragEnabled = true;
-            //WindowOptions[0] = GUILayout.ExpandHeight(true);
-            WindowCaption="OAT Bean Counter";
-    	}
+	public class VesselResource
+	{
+		public PartResourceDefinition info;
+		public double maxAmount = 0;
+		public double amount = 0;
+		public string resourceName;
 
-        internal override void DrawWindow(int id)
-        {
-        	float cost = parts.Sum(p => p.partInfo.cost);
-			GUILayout.Label(String.Format("Cost: {0}", cost));
-			foreach (Part part in parts) {
-				string partname = part.partInfo.name;
-				GUILayout.BeginVertical("box");
-				GUILayout.Label(partname);
-				if(part.Resources.Count > 0)
-				{
-					foreach(PartResource res in part.Resources)
-					{
-						if (res.info.unitCost == 0 || res.amount == 0) {
-							continue;
-						}
-						double tonnage = res.amount * res.info.density;
-						double rescost = res.amount * res.info.unitCost;
-						GUILayout.Label(String.Format("{0}: {1:f2}t (${2:f0})",
-							res.resourceName, tonnage, rescost));
-					}
-				}
-				GUILayout.EndVertical();
-			}
-        }
-
-		internal override void Update()
+		public VesselResource(PartResourceDefinition partinfo, string name)
 		{
+			resourceName = name;
+			info = partinfo;
 		}
 
-		// TODO: currently only works in the editor. Blank list otherwise
-        List<Part> parts
-        {
-            get
-            {
-            	if (HighLogic.LoadedSceneIsEditor) {
-            		List<Part> parts = EditorLogic.fetch.ship.parts;
-            		if (parts != null
-            			&& parts.Count > 0) {
-            			return parts;
-            		} else {
-            			return new List<Part>();
-            		}
-            	}
+		public VesselResource(PartResourceDefinition partinfo, string name, double amt, double max) : this(partinfo, name)
+		{
+			amount = amt;
+			maxAmount = max;
+		}
 
-                return new List<Part>();
-            }
-        }
-    }
+		public void Add(PartResource pr) {
+			amount += pr.amount;
+			maxAmount += pr.maxAmount;
+		}
+
+		public double mass
+		{
+			get
+			{
+				return amount * info.density;
+			}
+		}
+
+		public double cost
+		{
+			get
+			{
+				return amount * info.unitCost;
+			}
+		}
+	}
+
 #if DEBUG
     // Auto load the testing save when debugging
     [KSPAddon(KSPAddon.Startup.MainMenu, false)]

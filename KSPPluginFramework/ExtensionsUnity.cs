@@ -13,7 +13,7 @@ using System.Text;
 using KSP;
 using UnityEngine;
 
-namespace KSPPluginFramework
+namespace OATBeanCounter
 {
     /// <summary>
     /// CLass containing some extension methods for Unity Objects

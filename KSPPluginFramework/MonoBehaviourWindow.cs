@@ -13,7 +13,7 @@ using System.Text;
 using KSP;
 using UnityEngine;
 
-namespace KSPPluginFramework
+namespace OATBeanCounter
 {
 
     [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = true)]
