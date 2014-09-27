@@ -188,6 +188,11 @@ namespace OATBeanCounter
 
                 //CheatOptions.InfiniteFuel = true;
             }
+
+            if (!BCEvents.instance.eventsAdded)
+            {
+                BCEvents.instance.addEvents();
+            }
         }
     }
 #endif
