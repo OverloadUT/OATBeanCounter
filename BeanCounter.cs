@@ -82,6 +82,7 @@ namespace OATBeanCounter
 		private void InitializePersistence()
 		{
 			LogFormatted_DebugOnly("InitializePersistence()");
+			// TODO change scenario module name manually so the OATBeanCounterData class can be consistent with the rest of the code
 			ProtoScenarioModule scenario = HighLogic.CurrentGame.scenarios.Find(s => s.moduleName == typeof(OATBeanCounterData).Name);
             if (scenario == null)
             {

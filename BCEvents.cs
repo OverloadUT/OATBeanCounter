@@ -60,6 +60,8 @@ namespace OATBeanCounter
 				{
 					if (res.info.unitCost == 0 || res.amount == 0)
 					{
+						// Don't need to keep track of free resources
+						// Or maybe we should, in case the cost changes due to a mod/game update?
 						continue;
 					}
 					
@@ -76,10 +78,8 @@ namespace OATBeanCounter
 			}
 
 			launch.resources = resources;
+
 			OATBeanCounterData.data.launches.Add(launch);
-			
-			BeanCounter.LogFormatted_DebugOnly("Launch Resources: {0}", launch.resources.Count);
-			BeanCounter.LogFormatted_DebugOnly("Launches: {0}", OATBeanCounterData.data.launches.Count);
 		}
     }
 }
