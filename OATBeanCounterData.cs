@@ -37,63 +37,49 @@ namespace OATBeanCounter
         [Persistent] public int persistInt = 1;
         [Persistent] public string data_version = "none";
 		[Persistent] public List<BCLaunchData> launches = new List<BCLaunchData>();
+		[Persistent] public List<BCTransactionData> transactions = new List<BCTransactionData>();
+		[Persistent] public double funds = 0;
 
         public override void OnDecodeFromConfigNode()
         {
-            BeanCounter.LogFormatted_DebugOnly("OnDecodeFromConfigNode");
-			BeanCounter.LogFormatted_DebugOnly("launches Count: {0}", launches.Count);
-			BeanCounter.LogFormatted_DebugOnly(persistInt.ToString());
-
-			int i = 0;
-			foreach(BCLaunchData launch in launches)
-			{
-				i++;
-				BeanCounter.LogFormatted_DebugOnly("Launch {0}: {1}", i, launch.vesselName);
-
-				int j = 0;
-				foreach(BCVesselResourceData res in launch.resources)
-				{
-					BeanCounter.LogFormatted_DebugOnly("    Resource {0}: {1}", j, res.resourceName);
-				}
-			}
         }
 
         public override void OnEncodeToConfigNode()
         {
-			BeanCounter.LogFormatted_DebugOnly("OnEncodeToConfigNode");
-			BeanCounter.LogFormatted_DebugOnly("launches Count: {0}", launches.Count);
+			// TODO this is probably a dump place to do this? Should have a proper data update system, but YAGNI
 			data_version = BeanCounter.VERSION;
-			
-//			ConfigNode node_launches = new ConfigNode("launches");
-//			node_launches = ConfigNode.CreateConfigFromObject(launches);
-			
-			int i = 0;
-			foreach(BCLaunchData launch in launches)
-			{
-				i++;
-				BeanCounter.LogFormatted_DebugOnly("Launch {0}: {1}", i, launch.vesselName);
-				
-				int j = 0;
-				foreach(BCVesselResourceData res in launch.resources)
-				{
-					j++;
-					BeanCounter.LogFormatted_DebugOnly("    Resource {0}: {1}", j, res.resourceName);
-				}
-			}
         }
-    }
-
-	public class BCLaunchData : ConfigNodeStorage
+	}
+	
+	public class BCTransactionData : ConfigNodeStorage
 	{
-		[Persistent] public string vesselName = "Unknown Craft";
-		[Persistent] public int vesselID = 0;
-		[Persistent] public float dryCost = 0;
-		[Persistent] public List<BCVesselResourceData> resources = new List<BCVesselResourceData>();
+		// TODO need to track WHAT the transaction was, probably with an enum? Struct?
+		[Persistent] public double amount = 0;
+		[Persistent] public double balance = 0;
+		[Persistent] public double time = HighLogic.fetch.currentGame.UniversalTime;
 		
 		public override void OnDecodeFromConfigNode()
 		{
 		}
 		
+		public override void OnEncodeToConfigNode()
+		{
+		}
+	}
+
+	public class BCLaunchData : ConfigNodeStorage
+	{
+		[Persistent] public string vesselName = "Unknown Craft";
+		[Persistent] public Guid id = new Guid();
+		[Persistent] public int missionID = -1;
+		[Persistent] public float dryCost = 0;
+		[Persistent] public float resourceCost = 0;
+		[Persistent] public float totalCost = 0;
+		[Persistent] public List<BCVesselResourceData> resources = new List<BCVesselResourceData>();
+		
+		public override void OnDecodeFromConfigNode()
+		{
+		}
 		
 		public override void OnEncodeToConfigNode()
 		{

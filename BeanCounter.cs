@@ -57,6 +57,11 @@ namespace OATBeanCounter
 
 		internal override void Awake()
 		{
+			if (!BCEvents.instance.eventsAdded)
+			{
+				BCEvents.instance.addEvents();
+			}
+
             editorWindow = gameObject.AddComponent<BCEditorWindow>();
             RenderingManager.AddToPostDrawQueue(1, DrawGUI);
 		}
@@ -188,11 +193,6 @@ namespace OATBeanCounter
                 }
 
                 //CheatOptions.InfiniteFuel = true;
-            }
-
-            if (!BCEvents.instance.eventsAdded)
-            {
-                BCEvents.instance.addEvents();
             }
         }
     }

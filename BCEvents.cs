@@ -20,66 +20,163 @@ namespace OATBeanCounter
         }
 
         public void addEvents()
-        {
+		{
 			GameEvents.onVesselCreate.Add(vesselCreateEvent);
+			GameEvents.onVesselChange.Add(vesselChangeEvent);
+			GameEvents.onVesselSituationChange.Add(vesselSituationChangeEvent);
 			GameEvents.OnVesselRollout.Add(vesselRolloutEvent);
 			GameEvents.OnFundsChanged.Add(fundsChangedEvent);
 
             eventsAdded = true;
 		}
 
-		public void fundsChangedEvent(double diff)
+		public void fundsChangedEvent(double newfunds)
 		{
-			BeanCounter.LogFormatted_DebugOnly("Funds changed by {0:f2}. New funds: {1:f2}", diff, Funding.Instance.Funds);
+			double diff = newfunds - OATBeanCounterData.data.funds;
+
+			BeanCounter.LogFormatted_DebugOnly("Funds changed. New funds: {0:f2}", newfunds);
+			BeanCounter.LogFormatted_DebugOnly("Change amount: {0:f2}", diff);
+
+			BCTransactionData transaction = new BCTransactionData();
+			transaction.amount = diff;
+			transaction.balance = newfunds;
+			transaction.time = HighLogic.fetch.currentGame.UniversalTime;
+			OATBeanCounterData.data.transactions.Add(transaction);
+			OATBeanCounterData.data.funds = newfunds;
 		}
-		
+
 		public void vesselCreateEvent(Vessel vessel)
 		{
-			BeanCounter.LogFormatted_DebugOnly("vesselCreateEvent: {0} {1}", vessel.vesselName, vessel.state);
+			if(vessel.vesselType == VesselType.Unknown || vessel.vesselType == VesselType.SpaceObject)
+			{
+				// Ignore asteroids
+			} else {
+				BeanCounter.LogFormatted_DebugOnly("------------- vesselCreateEvent -------------");
+				BeanCounter.LogFormatted_DebugOnly("vesselName: {0}", vessel.vesselName);
+				BeanCounter.LogFormatted_DebugOnly("vesselType: {0}", vessel.vesselType);
+				BeanCounter.LogFormatted_DebugOnly("GetName(): {0}", vessel.GetName());
+				BeanCounter.LogFormatted_DebugOnly("name: {0}", vessel.name);
+				BeanCounter.LogFormatted_DebugOnly("RevealName(): {0}", vessel.RevealName());
+				BeanCounter.LogFormatted_DebugOnly("Vessel state: {0}", vessel.state);
+				BeanCounter.LogFormatted_DebugOnly("Vessel situation: {0}", vessel.situation);
+				BeanCounter.LogFormatted_DebugOnly("Part Count: {0}", vessel.Parts.Count);
+				BeanCounter.LogFormatted_DebugOnly("id: {0}", vessel.id);
+				BeanCounter.LogFormatted_DebugOnly("launchTime: {0}", vessel.launchTime);
+				BeanCounter.LogFormatted_DebugOnly("UniversalTime: {0}", HighLogic.fetch.currentGame.UniversalTime);
+				BeanCounter.LogFormatted_DebugOnly("New launch? {0}", (HighLogic.fetch.currentGame.UniversalTime == vessel.launchTime));
+				BeanCounter.LogFormatted_DebugOnly("Mission Time: {0}", vessel.missionTime);
+				if(vessel.rootPart == null)
+				{
+					BeanCounter.LogFormatted_DebugOnly("Vessel has no rootPart");
+				} else {
+					BeanCounter.LogFormatted_DebugOnly("Vessel root missionID: {0}", vessel.rootPart.missionID);
+				}
+				BeanCounter.LogFormatted_DebugOnly("----------- /vesselCreateEvent -------------");
+			}
+		}
+		
+		public void vesselChangeEvent(Vessel vessel)
+		{
+			if(vessel.vesselType == VesselType.Unknown || vessel.vesselType == VesselType.SpaceObject)
+			{
+				// Ignore asteroids
+			} else {
+				BeanCounter.LogFormatted_DebugOnly("------------- vesselChangeEvent -------------");
+				BeanCounter.LogFormatted_DebugOnly("name: {0}", vessel.vesselName);
+				BeanCounter.LogFormatted_DebugOnly("id: {0}", vessel.id);
+				BeanCounter.LogFormatted_DebugOnly("Vessel situation: {0}", vessel.situation);
+				if(vessel.rootPart == null)
+				{
+					BeanCounter.LogFormatted_DebugOnly("Vessel has no rootPart");
+				} else {
+					BeanCounter.LogFormatted_DebugOnly("Vessel root missionID: {0}", vessel.rootPart.missionID);
+				}
+				
+				BeanCounter.LogFormatted_DebugOnly("FlightGlobals.Vessels.Count: {0}", FlightGlobals.Vessels.Count);
+
+				BeanCounter.LogFormatted_DebugOnly("------------ /vesselChangeEvent -------------");
+
+				if (vessel.situation == Vessel.Situations.PRELAUNCH)
+				{
+					BeanCounter.LogFormatted_DebugOnly("NEW VESSEL LAUNCH DETECTED: {0}", vessel.vesselName);
+
+					BCLaunchData launch = new BCLaunchData ();
+					launch.vesselName = vessel.vesselName;
+
+					// TODO need to make our own GetShipCosts for vessels because it's not available
+//					totalCost = ship.GetShipCosts (out dryCost, out fuelCost);
+//					launch.dryCost = dryCost;
+//					launch.resourceCost = fuelCost;
+//					launch.totalCost = totalCost;
+
+					List<BCVesselResourceData> resources = new List<BCVesselResourceData>();
+					foreach (Part part in vessel.parts)
+					{
+						foreach (PartResource res in part.Resources)
+						{
+							if (res.info.unitCost == 0 || res.amount == 0)
+							{
+								// Don't need to keep track of free resources
+								// Or maybe we should, in case the cost changes due to a mod/game update?
+								continue;
+							}
+							
+							BCVesselResourceData vr = resources.Find(r => r.resourceName == res.resourceName);
+							if (vr == null)
+							{
+								resources.Add(new BCVesselResourceData(res.info, res.resourceName, res.amount, res.maxAmount));
+							}
+							else
+							{
+								vr.Add(res);
+							}
+						}
+					}
+					
+					launch.resources = resources;
+					
+					OATBeanCounterData.data.launches.Add(launch);
+
+				}
+			}
+		}
+		
+		public void vesselSituationChangeEvent(GameEvents.HostedFromToAction<Vessel, Vessel.Situations> ev)
+		{
+			Vessel vessel = ev.host;
+			
+			if(vessel.vesselType == VesselType.Unknown || vessel.vesselType == VesselType.Unknown)
+			{
+				// Ignore asteroids
+			} else {
+				BeanCounter.LogFormatted_DebugOnly("------------- vesselSituationChangeEvent -------------");
+				BeanCounter.LogFormatted_DebugOnly("name: {0}", vessel.vesselName);
+				BeanCounter.LogFormatted_DebugOnly("id: {0}", vessel.id);
+				BeanCounter.LogFormatted_DebugOnly("from: {0}", ev.from);
+				BeanCounter.LogFormatted_DebugOnly("to: {0}", ev.to);
+				if(vessel.rootPart == null)
+				{
+					BeanCounter.LogFormatted_DebugOnly("Vessel has no rootPart");
+				} else {
+					BeanCounter.LogFormatted_DebugOnly("Vessel root missionID: {0}", vessel.rootPart.missionID);
+				}
+				BeanCounter.LogFormatted_DebugOnly("------------ /vesselSituationChangeEvent -------------");
+			}
 		}
 		
 		public void vesselRolloutEvent(ShipConstruct ship)
 		{
-			BeanCounter.LogFormatted_DebugOnly("vesselRolloutEvent: {0}", ship.shipName);
+			BeanCounter.LogFormatted_DebugOnly("------------- vesselRolloutEvent -------------");
+			BeanCounter.LogFormatted_DebugOnly("Rollout: {0}", ship.shipName);
 
 			float dryCost, fuelCost, totalCost;
 			totalCost = ship.GetShipCosts (out dryCost, out fuelCost);
 			BeanCounter.LogFormatted_DebugOnly("Total Cost: {0:f2}", totalCost);
 			BeanCounter.LogFormatted_DebugOnly("Dry Cost: {0:f2}", dryCost);
 			BeanCounter.LogFormatted_DebugOnly("Fuel Cost: {0:f2}", fuelCost);
+			BeanCounter.LogFormatted_DebugOnly("launchID: {0}", HighLogic.fetch.currentGame.launchID);
 
-			BCLaunchData launch = new BCLaunchData ();
-
-			launch.vesselName = ship.shipName;
-			launch.dryCost = dryCost;
-
-			List<BCVesselResourceData> resources = new List<BCVesselResourceData>();
-			foreach (Part part in ship.parts)
-			{
-				foreach (PartResource res in part.Resources)
-				{
-					if (res.info.unitCost == 0 || res.amount == 0)
-					{
-						// Don't need to keep track of free resources
-						// Or maybe we should, in case the cost changes due to a mod/game update?
-						continue;
-					}
-					
-					BCVesselResourceData vr = resources.Find(r => r.resourceName == res.resourceName);
-					if (vr == null)
-					{
-						resources.Add(new BCVesselResourceData(res.info, res.resourceName, res.amount, res.maxAmount));
-					}
-					else
-					{
-						vr.Add(res);
-					}
-				}
-			}
-
-			launch.resources = resources;
-
-			OATBeanCounterData.data.launches.Add(launch);
+			BeanCounter.LogFormatted_DebugOnly("------------ /vesselRolloutEvent -------------");
 		}
     }
 }
