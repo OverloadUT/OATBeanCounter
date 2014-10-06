@@ -23,7 +23,6 @@ namespace OATBeanCounter
         {
         	float cost = parts.Sum(p => p.partInfo.cost);
 
-			GUILayout.Label(String.Format("Persist: {0}", OATBeanCounterData.data.persistInt));
 			GUILayout.Label(String.Format("Cost: {0:f2}", cost));
 			GUILayout.Label(String.Format("Parts: {0}", parts.Count));
 			

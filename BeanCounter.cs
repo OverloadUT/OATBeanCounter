@@ -57,6 +57,7 @@ namespace OATBeanCounter
 
 		internal override void Awake()
 		{
+
 			if (!BCEvents.instance.eventsAdded)
 			{
 				BCEvents.instance.addEvents();

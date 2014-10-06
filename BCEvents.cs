@@ -26,7 +26,7 @@ namespace OATBeanCounter
 			GameEvents.onVesselSituationChange.Add(vesselSituationChangeEvent);
 			GameEvents.OnVesselRollout.Add(vesselRolloutEvent);
 			GameEvents.OnFundsChanged.Add(fundsChangedEvent);
-
+			//GameEvents.onGUIRecoveryDialogSpawn.Add(recoveryDialogSpawnEvent);
             eventsAdded = true;
 		}
 
@@ -95,49 +95,6 @@ namespace OATBeanCounter
 				BeanCounter.LogFormatted_DebugOnly("FlightGlobals.Vessels.Count: {0}", FlightGlobals.Vessels.Count);
 
 				BeanCounter.LogFormatted_DebugOnly("------------ /vesselChangeEvent -------------");
-
-				if (vessel.situation == Vessel.Situations.PRELAUNCH)
-				{
-					BeanCounter.LogFormatted_DebugOnly("NEW VESSEL LAUNCH DETECTED: {0}", vessel.vesselName);
-
-					BCLaunchData launch = new BCLaunchData ();
-					launch.vesselName = vessel.vesselName;
-
-					// TODO need to make our own GetShipCosts for vessels because it's not available
-//					totalCost = ship.GetShipCosts (out dryCost, out fuelCost);
-//					launch.dryCost = dryCost;
-//					launch.resourceCost = fuelCost;
-//					launch.totalCost = totalCost;
-
-					List<BCVesselResourceData> resources = new List<BCVesselResourceData>();
-					foreach (Part part in vessel.parts)
-					{
-						foreach (PartResource res in part.Resources)
-						{
-							if (res.info.unitCost == 0 || res.amount == 0)
-							{
-								// Don't need to keep track of free resources
-								// Or maybe we should, in case the cost changes due to a mod/game update?
-								continue;
-							}
-							
-							BCVesselResourceData vr = resources.Find(r => r.resourceName == res.resourceName);
-							if (vr == null)
-							{
-								resources.Add(new BCVesselResourceData(res.info, res.resourceName, res.amount, res.maxAmount));
-							}
-							else
-							{
-								vr.Add(res);
-							}
-						}
-					}
-					
-					launch.resources = resources;
-					
-					OATBeanCounterData.data.launches.Add(launch);
-
-				}
 			}
 		}
 		
@@ -145,7 +102,7 @@ namespace OATBeanCounter
 		{
 			Vessel vessel = ev.host;
 			
-			if(vessel.vesselType == VesselType.Unknown || vessel.vesselType == VesselType.Unknown)
+			if(vessel.vesselType == VesselType.Unknown || vessel.vesselType == VesselType.SpaceObject)
 			{
 				// Ignore asteroids
 			} else {
@@ -163,20 +120,86 @@ namespace OATBeanCounter
 				BeanCounter.LogFormatted_DebugOnly("------------ /vesselSituationChangeEvent -------------");
 			}
 		}
-		
+
+		/// <summary>
+		/// Fires when a new vessel is created at the launch pad.
+		/// </summary>
+		/// <param name="ship">The ship being rolled out.</param>
 		public void vesselRolloutEvent(ShipConstruct ship)
 		{
-			BeanCounter.LogFormatted_DebugOnly("------------- vesselRolloutEvent -------------");
-			BeanCounter.LogFormatted_DebugOnly("Rollout: {0}", ship.shipName);
-
 			float dryCost, fuelCost, totalCost;
 			totalCost = ship.GetShipCosts (out dryCost, out fuelCost);
+
+
+			BeanCounter.LogFormatted_DebugOnly("------------- vesselRolloutEvent -------------");
+			BeanCounter.LogFormatted_DebugOnly("Rollout: {0}", ship.shipName);
 			BeanCounter.LogFormatted_DebugOnly("Total Cost: {0:f2}", totalCost);
 			BeanCounter.LogFormatted_DebugOnly("Dry Cost: {0:f2}", dryCost);
 			BeanCounter.LogFormatted_DebugOnly("Fuel Cost: {0:f2}", fuelCost);
 			BeanCounter.LogFormatted_DebugOnly("launchID: {0}", HighLogic.fetch.currentGame.launchID);
-
 			BeanCounter.LogFormatted_DebugOnly("------------ /vesselRolloutEvent -------------");
+
+
+			Vessel vessel = FlightGlobals.ActiveVessel;
+			BeanCounter.LogFormatted_DebugOnly("NEW VESSEL LAUNCH DETECTED: {0}", vessel.vesselName);
+			
+			BCLaunchData launch = new BCLaunchData ();
+			launch.vesselName = vessel.vesselName;
+			launch.missionID = vessel.rootPart.missionID; // TODO null check this
+			launch.dryCost = dryCost;
+			launch.totalCost = totalCost;
+			launch.launchTime = vessel.launchTime;
+
+			// TODO move this to utils?
+			List<BCVesselResourceData> resources = new List<BCVesselResourceData>();
+			List<BCVesselPartData> parts = new List<BCVesselPartData>();
+			float total_resource_cost = 0;
+			
+			foreach (Part part in vessel.parts)
+			{
+				BCVesselPartData part_data = new BCVesselPartData();
+				part_data.partName = part.partInfo.name;
+				
+				float part_full_cost = part.partInfo.cost;
+				float part_resource_cost_full = 0;
+				float part_resource_cost_actual = 0;
+				
+				foreach (PartResource res in part.Resources)
+				{
+					if (res.info.unitCost == 0 || res.amount == 0)
+					{
+						// Don't need to keep track of free resources
+						// Or maybe we should, in case the cost changes due to a mod/game update?
+						continue;
+					}
+					
+					part_resource_cost_full += (float)(res.info.unitCost * res.maxAmount);
+					part_resource_cost_actual += (float)(res.info.unitCost * res.amount);
+					
+					BCVesselResourceData vr = resources.Find(r => r.resourceName == res.resourceName);
+					if (vr == null)
+					{
+						resources.Add(new BCVesselResourceData(res.info, res.resourceName, res.amount, res.maxAmount));
+					}
+					else
+					{
+						vr.Add(res);
+					}
+				}
+				
+				float part_dry_cost = part_full_cost - part_resource_cost_full;
+				part_data.baseCost = part_dry_cost;
+				part_data.moduleCosts = part.GetModuleCosts();
+				parts.Add(part_data);
+
+				total_resource_cost += part_resource_cost_actual;
+			}
+			
+			launch.resources = resources;
+			launch.parts = parts;
+			launch.resourceCost = total_resource_cost;
+
+			OATBeanCounterData.data.launches.Add(launch);
 		}
     }
 }

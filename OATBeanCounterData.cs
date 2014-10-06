@@ -41,13 +41,16 @@ namespace OATBeanCounter
 		[Persistent] public double funds = 0;
 
         public override void OnDecodeFromConfigNode()
-        {
+		{
+			BeanCounter.LogFormatted_DebugOnly("Decoding BC Data Storage. Launches: {0}, Transactions: {1}", launches.Count, transactions.Count);
         }
 
         public override void OnEncodeToConfigNode()
         {
-			// TODO this is probably a dump place to do this? Should have a proper data update system, but YAGNI
+			// TODO this is probably a dumb place to do this? Should have a proper data update system, but YAGNI
 			data_version = BeanCounter.VERSION;
+
+			BeanCounter.LogFormatted_DebugOnly("Encoding BC Data Storage. Launches: {0}, Transactions: {1}", launches.Count, transactions.Count);
         }
 	}
 	
@@ -70,12 +73,47 @@ namespace OATBeanCounter
 	public class BCLaunchData : ConfigNodeStorage
 	{
 		[Persistent] public string vesselName = "Unknown Craft";
-		[Persistent] public Guid id = new Guid();
-		[Persistent] public int missionID = -1;
+		[Persistent] public uint missionID = 0;
 		[Persistent] public float dryCost = 0;
 		[Persistent] public float resourceCost = 0;
 		[Persistent] public float totalCost = 0;
+		[Persistent] public double launchTime = 0;
 		[Persistent] public List<BCVesselResourceData> resources = new List<BCVesselResourceData>();
+		[Persistent] public List<BCVesselPartData> parts = new List<BCVesselPartData>();
+		
+
+		public override void OnDecodeFromConfigNode()
+		{
+		}
+		
+		public override void OnEncodeToConfigNode()
+		{
+		}
+	}
+
+	public class BCVesselPartData : ConfigNodeStorage
+	{
+		[Persistent] public string partName = "UnknownPart";
+		/// <summary>
+		/// The base DRY cost of the part. Does not include costs added by modules.
+		/// </summary>
+		[Persistent] public float baseCost = 0;
+		/// <summary>
+		/// The sum of all of the extra costs added by modules
+		/// </summary>
+		[Persistent] public float moduleCosts = 0;
+
+		/// <summary>
+		/// Gets the total DRY cost of the part, including any module-added costs
+		/// </summary>
+		/// <value>The total DRY cost of the part</value>
+		public float cost
+		{
+			get
+			{
+				return baseCost + moduleCosts;
+			}
+		}
 		
 		public override void OnDecodeFromConfigNode()
 		{
