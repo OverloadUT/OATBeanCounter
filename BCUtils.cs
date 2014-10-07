@@ -22,6 +22,36 @@ namespace OATBeanCounter
 		public BCUtils ()
 		{
 		}
+
+		/// <summary>
+		/// Gets the missionID of the ROOT part of the given vessel.
+		/// </summary>
+		/// <returns>The missionID</returns>
+		/// <param name="vessel">The Vessel to get the missionID of.</param>
+		public static uint GetVesselMissionID(Vessel vessel)
+		{
+			if(vessel.rootPart == null)
+			{
+				return GetVesselMissionID(vessel.protoVessel);
+			} else {
+				return vessel.rootPart.missionID;
+			}
+		}
+
+		/// <summary>
+		/// Gets the missionID of the ROOT part of the given vessel.
+		/// </summary>
+		/// <returns>The missionID</returns>
+		/// <param name="pvessel">The ProtoVessel to get the missionID of.</param>
+		public static uint GetVesselMissionID(ProtoVessel pvessel)
+		{
+			if(pvessel.protoPartSnapshots[pvessel.rootIndex] == null)
+			{
+				return 0;
+			} else {
+				return pvessel.protoPartSnapshots[pvessel.rootIndex].missionID;
+			}
+		}
 	}
 }
 

@@ -85,12 +85,7 @@ namespace OATBeanCounter
 				BeanCounter.LogFormatted_DebugOnly("name: {0}", vessel.vesselName);
 				BeanCounter.LogFormatted_DebugOnly("id: {0}", vessel.id);
 				BeanCounter.LogFormatted_DebugOnly("Vessel situation: {0}", vessel.situation);
-				if(vessel.rootPart == null)
-				{
-					BeanCounter.LogFormatted_DebugOnly("Vessel has no rootPart");
-				} else {
-					BeanCounter.LogFormatted_DebugOnly("Vessel root missionID: {0}", vessel.rootPart.missionID);
-				}
+				BeanCounter.LogFormatted_DebugOnly("Vessel root missionID: {0}", BCUtils.GetVesselMissionID(vessel));
 				
 				BeanCounter.LogFormatted_DebugOnly("FlightGlobals.Vessels.Count: {0}", FlightGlobals.Vessels.Count);
 
@@ -111,12 +106,7 @@ namespace OATBeanCounter
 				BeanCounter.LogFormatted_DebugOnly("id: {0}", vessel.id);
 				BeanCounter.LogFormatted_DebugOnly("from: {0}", ev.from);
 				BeanCounter.LogFormatted_DebugOnly("to: {0}", ev.to);
-				if(vessel.rootPart == null)
-				{
-					BeanCounter.LogFormatted_DebugOnly("Vessel has no rootPart");
-				} else {
-					BeanCounter.LogFormatted_DebugOnly("Vessel root missionID: {0}", vessel.rootPart.missionID);
-				}
+				BeanCounter.LogFormatted_DebugOnly("Vessel root missionID: {0}", BCUtils.GetVesselMissionID(vessel));
 				BeanCounter.LogFormatted_DebugOnly("------------ /vesselSituationChangeEvent -------------");
 			}
 		}
@@ -145,7 +135,7 @@ namespace OATBeanCounter
 			
 			BCLaunchData launch = new BCLaunchData ();
 			launch.vesselName = vessel.vesselName;
-			launch.missionID = vessel.rootPart.missionID; // TODO null check this
+			launch.missionID = BCUtils.GetVesselMissionID(vessel);
 			launch.dryCost = dryCost;
 			launch.totalCost = totalCost;
 			launch.launchTime = vessel.launchTime;
