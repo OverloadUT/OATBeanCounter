@@ -38,28 +38,43 @@ namespace OATBeanCounter
         [Persistent] public string data_version = "none";
 		[Persistent] public List<BCLaunchData> launches = new List<BCLaunchData>();
 		[Persistent] public List<BCTransactionData> transactions = new List<BCTransactionData>();
+		[Persistent] public List<BCRecoveryData> recoveries = new List<BCRecoveryData>();
 		[Persistent] public double funds = 0;
 
         public override void OnDecodeFromConfigNode()
 		{
-			BeanCounter.LogFormatted_DebugOnly("Decoding BC Data Storage. Launches: {0}, Transactions: {1}", launches.Count, transactions.Count);
         }
 
         public override void OnEncodeToConfigNode()
         {
 			// TODO this is probably a dumb place to do this? Should have a proper data update system, but YAGNI
 			data_version = BeanCounter.VERSION;
-
-			BeanCounter.LogFormatted_DebugOnly("Encoding BC Data Storage. Launches: {0}, Transactions: {1}", launches.Count, transactions.Count);
         }
 	}
+
+	public class BCRecoveryData : ConfigNodeStorage
+	{
+		[Persistent] public float recoveryFactor = 0;
+		[Persistent] public List<uint> partIDs = new List<uint>();
+		[Persistent] public double time = HighLogic.fetch.currentGame.UniversalTime;
+		
+		public override void OnDecodeFromConfigNode()
+		{
+		}
+		
+		public override void OnEncodeToConfigNode()
+		{
+		}
+	}
+
+	public enum BCTransactionTypes {Unknown, VesselLaunch, VesselRecovery, ContractAdvance, ContractPayment, ContractPenalty};
 	
 	public class BCTransactionData : ConfigNodeStorage
 	{
-		// TODO need to track WHAT the transaction was, probably with an enum? Struct?
 		[Persistent] public double amount = 0;
 		[Persistent] public double balance = 0;
 		[Persistent] public double time = HighLogic.fetch.currentGame.UniversalTime;
+		[Persistent] public BCTransactionTypes type = BCTransactionTypes.Unknown;
 		
 		public override void OnDecodeFromConfigNode()
 		{
@@ -91,6 +106,8 @@ namespace OATBeanCounter
 		}
 	}
 
+	public enum BCVesselPartStatus {Unknown, Active, Debris, Recovered, Destroyed};
+
 	public class BCVesselPartData : ConfigNodeStorage
 	{
 		[Persistent] public string partName = "UnknownPart";
@@ -102,6 +119,19 @@ namespace OATBeanCounter
 		/// The sum of all of the extra costs added by modules
 		/// </summary>
 		[Persistent] public float moduleCosts = 0;
+		/// <summary>
+		/// The status of this part:
+		/// Unknown: Shouldn't ever be used; means something went wrong
+		/// Active: Part of a valid vessel
+		/// Debris: Detached from a vessel and became debris
+		/// Recovered: Recovered for a partial or full refund
+		/// Destroyed: Part was destroyed
+		/// </summary>
+		[Persistent] public BCVesselPartStatus status = BCVesselPartStatus.Unknown;
+		/// <summary>
+		/// The unique ID of this part. Comes from Part.flightID
+		/// </summary>
+		[Persistent] public uint uid = 0;
 
 		/// <summary>
 		/// Gets the total DRY cost of the part, including any module-added costs
