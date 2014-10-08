@@ -89,6 +89,26 @@ namespace OATBeanCounter
 			transaction.reason = reason;
 			OATBeanCounterData.data.transactions.Add(transaction);
 			OATBeanCounterData.data.funds = newfunds;
+
+			switch (transaction.reason)
+			{
+			case TransactionReasons.VesselRecovery:
+				BCRecoveryData recovery =
+					(from rec in OATBeanCounterData.data.recoveries
+					 where rec.time == HighLogic.fetch.currentGame.UniversalTime
+					 select rec).Single();
+				recovery.transactionGuid = transaction.guid;
+				transaction.dataGuid = recovery.guid;
+				break;
+			case TransactionReasons.VesselRollout:
+				BCLaunchData launch =
+					(from l in OATBeanCounterData.data.launches
+					 where l.launchTime == HighLogic.fetch.currentGame.UniversalTime
+					 select l).Single();
+				launch.transactionGuid = transaction.guid;
+				transaction.dataGuid = launch.guid;
+				break;
+			}
 		}
 
 		/// <summary>

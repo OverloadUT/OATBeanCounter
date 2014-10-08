@@ -56,6 +56,8 @@ namespace OATBeanCounter
 	public class BCRecoveryData : ConfigNodeStorage
 	{
 		// TODO need resources. Might need to create a ResourceList class
+		[Persistent] public Guid guid = Guid.NewGuid();
+		[Persistent] public Guid transactionGuid;
 		[Persistent] public float recoveryFactor = 0;
 		[Persistent] public List<uint> partIDs = new List<uint>();
 		[Persistent] public double time = HighLogic.fetch.currentGame.UniversalTime;
@@ -73,11 +75,21 @@ namespace OATBeanCounter
 	
 	public class BCTransactionData : ConfigNodeStorage
 	{
+		[Persistent] public Guid guid = Guid.NewGuid();
+		/// <summary>
+		/// The Guid of another BCData object based on the TransactionReason
+		/// For example, in a VesselRecovery transaction, this refers to a BCRecoveryData guid
+		/// </summary>
+		[Persistent] public Guid dataGuid;
 		[Persistent] public double amount = 0;
 		[Persistent] public double balance = 0;
 		[Persistent] public double time = HighLogic.fetch.currentGame.UniversalTime;
 		[Persistent] public BCTransactionReasons otherreason = BCTransactionReasons.None;
 		[Persistent] public TransactionReasons reason = TransactionReasons.None;
+		
+		public BCTransactionData()
+		{
+		}
 		
 		public override void OnDecodeFromConfigNode()
 		{
@@ -90,15 +102,17 @@ namespace OATBeanCounter
 
 	public class BCLaunchData : ConfigNodeStorage
 	{
+		[Persistent] public Guid guid = Guid.NewGuid();
+		[Persistent] public Guid transactionGuid;
+
 		[Persistent] public string vesselName = "Unknown Craft";
 		[Persistent] public uint missionID = 0;
 		[Persistent] public float dryCost = 0;
 		[Persistent] public float resourceCost = 0;
 		[Persistent] public float totalCost = 0;
-		[Persistent] public double launchTime = 0;
+		[Persistent] public double launchTime = HighLogic.fetch.currentGame.UniversalTime;
 		[Persistent] public List<BCVesselResourceData> resources = new List<BCVesselResourceData>();
 		[Persistent] public List<BCVesselPartData> parts = new List<BCVesselPartData>();
-		
 
 		public override void OnDecodeFromConfigNode()
 		{
