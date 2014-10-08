@@ -52,8 +52,10 @@ namespace OATBeanCounter
         }
 	}
 
+	// TODO this might need to move to some sort of larger VesselEvent type data
 	public class BCRecoveryData : ConfigNodeStorage
 	{
+		// TODO need resources. Might need to create a ResourceList class
 		[Persistent] public float recoveryFactor = 0;
 		[Persistent] public List<uint> partIDs = new List<uint>();
 		[Persistent] public double time = HighLogic.fetch.currentGame.UniversalTime;
@@ -67,14 +69,15 @@ namespace OATBeanCounter
 		}
 	}
 
-	public enum BCTransactionTypes {Unknown, VesselLaunch, VesselRecovery, ContractAdvance, ContractPayment, ContractPenalty};
+	public enum BCTransactionReasons {None};
 	
 	public class BCTransactionData : ConfigNodeStorage
 	{
 		[Persistent] public double amount = 0;
 		[Persistent] public double balance = 0;
 		[Persistent] public double time = HighLogic.fetch.currentGame.UniversalTime;
-		[Persistent] public BCTransactionTypes type = BCTransactionTypes.Unknown;
+		[Persistent] public BCTransactionReasons otherreason = BCTransactionReasons.None;
+		[Persistent] public TransactionReasons reason = TransactionReasons.None;
 		
 		public override void OnDecodeFromConfigNode()
 		{

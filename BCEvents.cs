@@ -42,22 +42,16 @@ namespace OATBeanCounter
 				(from ppart in pvessel.protoPartSnapshots
 				 select ppart.missionID).ToList();
 
-			BeanCounter.LogFormatted_DebugOnly("Mission IDs: {0}", recovered_mission_ids.Count);
-
 			// Get a list of every unique part ID so we can match them up
 			List<uint> recovered_part_ids = 
 				(from ppart in pvessel.protoPartSnapshots
 				 select ppart.flightID).ToList();
-			
-			BeanCounter.LogFormatted_DebugOnly("Part IDs: {0}", recovered_part_ids.Count);
 
 			// Now lets get all of the launches that contain recovered parts
 			List<BCLaunchData> recovered_launches =
 				(from launch in OATBeanCounterData.data.launches
 				 where recovered_mission_ids.Contains(launch.missionID)
 				 select launch).ToList();
-			
-			BeanCounter.LogFormatted_DebugOnly("Launches: {0}", recovered_launches.Count);
 
 			// And finally we get the full list of every recovered part so we can flag them all as recovered
 			var recoveredparts =
@@ -80,9 +74,10 @@ namespace OATBeanCounter
 			BeanCounter.LogFormatted_DebugOnly("--------- /vesselRecoveryProcessingEvent ------------");
 		}
 
-		public void fundsChangedEvent(double newfunds)
+		public void fundsChangedEvent(double newfunds, TransactionReasons reason)
 		{
 			double diff = newfunds - OATBeanCounterData.data.funds;
+
 
 			BeanCounter.LogFormatted_DebugOnly("Funds changed. New funds: {0:f2}", newfunds);
 			BeanCounter.LogFormatted_DebugOnly("Change amount: {0:f2}", diff);
@@ -91,6 +86,7 @@ namespace OATBeanCounter
 			transaction.amount = diff;
 			transaction.balance = newfunds;
 			transaction.time = HighLogic.fetch.currentGame.UniversalTime;
+			transaction.reason = reason;
 			OATBeanCounterData.data.transactions.Add(transaction);
 			OATBeanCounterData.data.funds = newfunds;
 		}
@@ -127,38 +123,38 @@ namespace OATBeanCounter
 		
 		public void vesselChangeEvent(Vessel vessel)
 		{
-			if(vessel.vesselType == VesselType.Unknown || vessel.vesselType == VesselType.SpaceObject)
-			{
-				// Ignore asteroids
-			} else {
-				BeanCounter.LogFormatted_DebugOnly("------------- vesselChangeEvent -------------");
-				BeanCounter.LogFormatted_DebugOnly("name: {0}", vessel.vesselName);
-				BeanCounter.LogFormatted_DebugOnly("id: {0}", vessel.id);
-				BeanCounter.LogFormatted_DebugOnly("Vessel situation: {0}", vessel.situation);
-				BeanCounter.LogFormatted_DebugOnly("Vessel root missionID: {0}", BCUtils.GetVesselMissionID(vessel));
-				
-				BeanCounter.LogFormatted_DebugOnly("FlightGlobals.Vessels.Count: {0}", FlightGlobals.Vessels.Count);
-
-				BeanCounter.LogFormatted_DebugOnly("------------ /vesselChangeEvent -------------");
-			}
+//			if(vessel.vesselType == VesselType.Unknown || vessel.vesselType == VesselType.SpaceObject)
+//			{
+//				// Ignore asteroids
+//			} else {
+//				BeanCounter.LogFormatted_DebugOnly("------------- vesselChangeEvent -------------");
+//				BeanCounter.LogFormatted_DebugOnly("name: {0}", vessel.vesselName);
+//				BeanCounter.LogFormatted_DebugOnly("id: {0}", vessel.id);
+//				BeanCounter.LogFormatted_DebugOnly("Vessel situation: {0}", vessel.situation);
+//				BeanCounter.LogFormatted_DebugOnly("Vessel root missionID: {0}", BCUtils.GetVesselMissionID(vessel));
+//				
+//				BeanCounter.LogFormatted_DebugOnly("FlightGlobals.Vessels.Count: {0}", FlightGlobals.Vessels.Count);
+//
+//				BeanCounter.LogFormatted_DebugOnly("------------ /vesselChangeEvent -------------");
+//			}
 		}
 		
 		public void vesselSituationChangeEvent(GameEvents.HostedFromToAction<Vessel, Vessel.Situations> ev)
 		{
-			Vessel vessel = ev.host;
-			
-			if(vessel.vesselType == VesselType.Unknown || vessel.vesselType == VesselType.SpaceObject)
-			{
-				// Ignore asteroids
-			} else {
-				BeanCounter.LogFormatted_DebugOnly("------------- vesselSituationChangeEvent -------------");
-				BeanCounter.LogFormatted_DebugOnly("name: {0}", vessel.vesselName);
-				BeanCounter.LogFormatted_DebugOnly("id: {0}", vessel.id);
-				BeanCounter.LogFormatted_DebugOnly("from: {0}", ev.from);
-				BeanCounter.LogFormatted_DebugOnly("to: {0}", ev.to);
-				BeanCounter.LogFormatted_DebugOnly("Vessel root missionID: {0}", BCUtils.GetVesselMissionID(vessel));
-				BeanCounter.LogFormatted_DebugOnly("------------ /vesselSituationChangeEvent -------------");
-			}
+//			Vessel vessel = ev.host;
+//			
+//			if(vessel.vesselType == VesselType.Unknown || vessel.vesselType == VesselType.SpaceObject)
+//			{
+//				// Ignore asteroids
+//			} else {
+//				BeanCounter.LogFormatted_DebugOnly("------------- vesselSituationChangeEvent -------------");
+//				BeanCounter.LogFormatted_DebugOnly("name: {0}", vessel.vesselName);
+//				BeanCounter.LogFormatted_DebugOnly("id: {0}", vessel.id);
+//				BeanCounter.LogFormatted_DebugOnly("from: {0}", ev.from);
+//				BeanCounter.LogFormatted_DebugOnly("to: {0}", ev.to);
+//				BeanCounter.LogFormatted_DebugOnly("Vessel root missionID: {0}", BCUtils.GetVesselMissionID(vessel));
+//				BeanCounter.LogFormatted_DebugOnly("------------ /vesselSituationChangeEvent -------------");
+//			}
 		}
 
 		/// <summary>
@@ -167,17 +163,17 @@ namespace OATBeanCounter
 		/// <param name="ship">The ship being rolled out.</param>
 		public void vesselRolloutEvent(ShipConstruct ship)
 		{
+			BeanCounter.LogFormatted_DebugOnly("------------- vesselRolloutEvent -------------");
+
 			float dryCost, fuelCost, totalCost;
 			totalCost = ship.GetShipCosts (out dryCost, out fuelCost);
 
 
-			BeanCounter.LogFormatted_DebugOnly("------------- vesselRolloutEvent -------------");
 			BeanCounter.LogFormatted_DebugOnly("Rollout: {0}", ship.shipName);
 			BeanCounter.LogFormatted_DebugOnly("Total Cost: {0:f2}", totalCost);
 			BeanCounter.LogFormatted_DebugOnly("Dry Cost: {0:f2}", dryCost);
 			BeanCounter.LogFormatted_DebugOnly("Fuel Cost: {0:f2}", fuelCost);
 			BeanCounter.LogFormatted_DebugOnly("launchID: {0}", HighLogic.fetch.currentGame.launchID);
-			BeanCounter.LogFormatted_DebugOnly("------------ /vesselRolloutEvent -------------");
 
 
 			Vessel vessel = FlightGlobals.ActiveVessel;
@@ -240,8 +236,9 @@ namespace OATBeanCounter
 			launch.resources = resources;
 			launch.parts = parts;
 			launch.resourceCost = total_resource_cost;
-
 			OATBeanCounterData.data.launches.Add(launch);
+
+			BeanCounter.LogFormatted_DebugOnly("------------ /vesselRolloutEvent -------------");
 		}
     }
 }
