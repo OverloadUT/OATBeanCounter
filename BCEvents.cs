@@ -101,8 +101,8 @@ namespace OATBeanCounter
 					 select rec).SingleOrDefault();
 				if(recovery != null)
 				{
-					recovery.transactionGuid = transaction.guid;
-					transaction.dataGuid = recovery.guid;
+					recovery.transactionID = transaction.id;
+					transaction.dataID = recovery.id;
 				}
 				break;
 			case TransactionReasons.VesselRollout:
@@ -112,8 +112,8 @@ namespace OATBeanCounter
 					 select l).SingleOrDefault();
 				if(launch != null)
 				{
-					launch.transactionGuid = transaction.guid;
-					transaction.dataGuid = launch.guid;
+					launch.transactionID = transaction.id;
+					transaction.dataID = launch.id;
 				}
 				break;
 			}

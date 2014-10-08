@@ -34,12 +34,13 @@ namespace OATBeanCounter
 
     public class BCDataStorage : ConfigNodeStorage
     {
-        [Persistent] public int persistInt = 1;
         [Persistent] public string data_version = "none";
 		[Persistent] public List<BCLaunchData> launches = new List<BCLaunchData>();
 		[Persistent] public List<BCTransactionData> transactions = new List<BCTransactionData>();
 		[Persistent] public List<BCRecoveryData> recoveries = new List<BCRecoveryData>();
 		[Persistent] public double funds = 0;
+
+		[Persistent] public uint index = 0;
 
         public override void OnDecodeFromConfigNode()
 		{
@@ -56,12 +57,12 @@ namespace OATBeanCounter
 	public class BCRecoveryData : ConfigNodeStorage
 	{
 		// TODO need resources. Might need to create a ResourceList class
-		[Persistent] public Guid guid = Guid.NewGuid();
-		[Persistent] public Guid transactionGuid;
+		[Persistent] public uint id = ++OATBeanCounterData.data.index;
+		[Persistent] public uint transactionID;
 		[Persistent] public float recoveryFactor = 0;
 		[Persistent] public List<uint> partIDs = new List<uint>();
 		[Persistent] public double time = HighLogic.fetch.currentGame.UniversalTime;
-		
+
 		public override void OnDecodeFromConfigNode()
 		{
 		}
@@ -75,12 +76,12 @@ namespace OATBeanCounter
 	
 	public class BCTransactionData : ConfigNodeStorage
 	{
-		[Persistent] public Guid guid = Guid.NewGuid();
+		[Persistent] public uint id = ++OATBeanCounterData.data.index;
 		/// <summary>
-		/// The Guid of another BCData object based on the TransactionReason
-		/// For example, in a VesselRecovery transaction, this refers to a BCRecoveryData guid
+		/// The id of another BCData object based on the TransactionReason
+		/// For example, in a VesselRecovery transaction, this refers to a BCRecoveryData id
 		/// </summary>
-		[Persistent] public Guid dataGuid;
+		[Persistent] public uint dataID;
 		[Persistent] public double amount = 0;
 		[Persistent] public double balance = 0;
 		[Persistent] public double time = HighLogic.fetch.currentGame.UniversalTime;
@@ -102,8 +103,8 @@ namespace OATBeanCounter
 
 	public class BCLaunchData : ConfigNodeStorage
 	{
-		[Persistent] public Guid guid = Guid.NewGuid();
-		[Persistent] public Guid transactionGuid;
+		[Persistent] public uint id = ++OATBeanCounterData.data.index;
+		[Persistent] public uint transactionID;
 
 		[Persistent] public string vesselName = "Unknown Craft";
 		[Persistent] public uint missionID = 0;
