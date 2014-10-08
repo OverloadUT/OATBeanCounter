@@ -27,6 +27,8 @@ namespace OATBeanCounter
 			GameEvents.OnVesselRollout.Add(vesselRolloutEvent);
 			GameEvents.OnFundsChanged.Add(fundsChangedEvent);
 			GameEvents.onVesselRecoveryProcessing.Add(vesselRecoveryProcessingEvent);
+			
+			BeanCounter.LogFormatted_DebugOnly("OATBeanCounter Events Hooked");
 
             eventsAdded = true;
 		}
@@ -78,7 +80,6 @@ namespace OATBeanCounter
 		{
 			double diff = newfunds - OATBeanCounterData.data.funds;
 
-
 			BeanCounter.LogFormatted_DebugOnly("Funds changed. New funds: {0:f2}", newfunds);
 			BeanCounter.LogFormatted_DebugOnly("Change amount: {0:f2}", diff);
 
@@ -90,23 +91,30 @@ namespace OATBeanCounter
 			OATBeanCounterData.data.transactions.Add(transaction);
 			OATBeanCounterData.data.funds = newfunds;
 
+			// TODO this is awful
 			switch (transaction.reason)
 			{
 			case TransactionReasons.VesselRecovery:
 				BCRecoveryData recovery =
 					(from rec in OATBeanCounterData.data.recoveries
 					 where rec.time == HighLogic.fetch.currentGame.UniversalTime
-					 select rec).Single();
-				recovery.transactionGuid = transaction.guid;
-				transaction.dataGuid = recovery.guid;
+					 select rec).SingleOrDefault();
+				if(recovery != null)
+				{
+					recovery.transactionGuid = transaction.guid;
+					transaction.dataGuid = recovery.guid;
+				}
 				break;
 			case TransactionReasons.VesselRollout:
 				BCLaunchData launch =
 					(from l in OATBeanCounterData.data.launches
 					 where l.launchTime == HighLogic.fetch.currentGame.UniversalTime
-					 select l).Single();
-				launch.transactionGuid = transaction.guid;
-				transaction.dataGuid = launch.guid;
+					 select l).SingleOrDefault();
+				if(launch != null)
+				{
+					launch.transactionGuid = transaction.guid;
+					transaction.dataGuid = launch.guid;
+				}
 				break;
 			}
 		}
