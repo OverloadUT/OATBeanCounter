@@ -53,7 +53,8 @@ namespace OATBeanCounter
 		// TODO handle versioning better
 		public static String VERSION = "0.01";  // Current version
 
-		private BCEditorWindow editorWindow;
+        private BCEditorWindow editorWindow;
+        private BCDebugWindow debugWindow;
 
 		internal override void Awake()
 		{
@@ -64,6 +65,7 @@ namespace OATBeanCounter
 			}
 
             editorWindow = gameObject.AddComponent<BCEditorWindow>();
+            debugWindow = gameObject.AddComponent<BCDebugWindow>();
             RenderingManager.AddToPostDrawQueue(1, DrawGUI);
 		}
 		
@@ -79,10 +81,6 @@ namespace OATBeanCounter
 		
 		internal override void Update()
 		{
-			if(EditorLogic.fetch != null)
-			{
-				editorWindow.Visible = true;
-			}
 		}
 
 		private void InitializePersistence()
@@ -106,8 +104,10 @@ namespace OATBeanCounter
 		}
 
 		void DrawGUI()
-		{
-			editorWindow.Visible = true;
+        {
+#if DEBUG
+            debugWindow.Visible = true;
+#endif
 		}
 	}
 
@@ -169,7 +169,7 @@ namespace OATBeanCounter
 //                first = false;
 //                HighLogic.SaveFolder = "BeanCounterTesting";
 //                Game game = GamePersistence.LoadGame("persistent", HighLogic.SaveFolder, true, false);
-//
+
 //                if (game != null && game.flightState != null && game.compatible)
 //                {
 //                    Int32 FirstVessel = 0;
@@ -184,17 +184,17 @@ namespace OATBeanCounter
 //                    //         break;
 //                    //     }
 //                    // }
-//					if (!blnFoundVessel)
-//					{
-//						FirstVessel = 0;
-//						game.Start();
-//					}
-//					else
-//					{
-//                    	FlightDriver.StartAndFocusVessel(game, FirstVessel);
-//					}
+//                    if (!blnFoundVessel)
+//                    {
+//                        FirstVessel = 0;
+//                        game.Start();
+//                    }
+//                    else
+//                    {
+//                        FlightDriver.StartAndFocusVessel(game, FirstVessel);
+//                    }
 //                }
-//
+
 //                //CheatOptions.InfiniteFuel = true;
 //            }
 //        }

@@ -21,12 +21,13 @@ namespace OATBeanCounter
 
         public void addEvents()
 		{
-			GameEvents.onVesselCreate.Add(vesselCreateEvent);
 			GameEvents.onVesselChange.Add(vesselChangeEvent);
 			GameEvents.onVesselSituationChange.Add(vesselSituationChangeEvent);
 			GameEvents.OnVesselRollout.Add(vesselRolloutEvent);
 			GameEvents.OnFundsChanged.Add(fundsChangedEvent);
 			GameEvents.onVesselRecoveryProcessing.Add(vesselRecoveryProcessingEvent);
+            GameEvents.onPartDie.Add(partDieEvent);
+
 			
 			BeanCounter.LogFormatted_DebugOnly("OATBeanCounter Events Hooked");
 
@@ -68,13 +69,64 @@ namespace OATBeanCounter
 				partdata.status = BCVesselPartStatus.Recovered;
 			}
 
-			BCRecoveryData recovery = new BCRecoveryData();
+            BCRecoveryData recovery = new BCRecoveryData(true);
+            OATBeanCounterData.data.recoveries.Add(recovery);
+
 			recovery.partIDs = recovered_part_ids;
 			recovery.recoveryFactor = recoveryFactor;
-			OATBeanCounterData.data.recoveries.Add(recovery);
+
+            // Try to match this to the transaction
+            BCTransactionData transaction =
+                (from trans in OATBeanCounterData.data.transactions
+                 where trans.time == HighLogic.fetch.currentGame.UniversalTime
+                 && trans.reason == TransactionReasons.VesselRecovery
+                 select trans).SingleOrDefault();
+            if (transaction != null)
+            {
+                BeanCounter.LogFormatted_DebugOnly("Found matching transaction for this recovery: {0}", transaction.id);
+                recovery.transactionID = transaction.id;
+                transaction.dataID = recovery.id;
+            }
 
 			BeanCounter.LogFormatted_DebugOnly("--------- /vesselRecoveryProcessingEvent ------------");
 		}
+
+        public void partDieEvent(Part part)
+        {
+            BeanCounter.LogFormatted_DebugOnly("---------- partDieEvent ------------");
+
+            // Get the launch that this part was from
+            BCLaunchData launch =
+                (from launchq in OATBeanCounterData.data.launches
+                 where launchq.missionID == part.missionID
+                 select launchq).SingleOrDefault();
+
+            if(launch == null)
+            {
+                BeanCounter.LogFormatted_DebugOnly("Could not find launch for missionID {0}", part.missionID);
+                return;
+            }
+
+            // Get the launch that this part was from
+            BCVesselPartData partdata =
+                (from partq in launch.parts
+                 where partq.uid == part.flightID
+                 select partq).SingleOrDefault();
+
+            if (partdata == null)
+            {
+                BeanCounter.LogFormatted_DebugOnly("Could not find part for flightID {0}", part.flightID);
+                return;
+            }
+
+            BCPartDestructionData destruction = new BCPartDestructionData();
+            destruction.time = HighLogic.CurrentGame.UniversalTime;
+
+            partdata.status = BCVesselPartStatus.Destroyed;
+            partdata.destruction = destruction;
+
+            BeanCounter.LogFormatted_DebugOnly("--------- /partDieEvent ------------");
+        }
 
 		public void fundsChangedEvent(double newfunds, TransactionReasons reason)
 		{
@@ -83,7 +135,7 @@ namespace OATBeanCounter
 			BeanCounter.LogFormatted_DebugOnly("Funds changed. New funds: {0:f2}", newfunds);
 			BeanCounter.LogFormatted_DebugOnly("Change amount: {0:f2}", diff);
 
-			BCTransactionData transaction = new BCTransactionData();
+			BCTransactionData transaction = new BCTransactionData(true);
 			transaction.amount = diff;
 			transaction.balance = newfunds;
 			transaction.time = HighLogic.fetch.currentGame.UniversalTime;
@@ -92,6 +144,7 @@ namespace OATBeanCounter
 			OATBeanCounterData.data.funds = newfunds;
 
 			// TODO this is awful
+            // Also, it doesn't work anymore? This used to fire after the required events, but now it is before
 			switch (transaction.reason)
 			{
 			case TransactionReasons.VesselRecovery:
@@ -117,36 +170,6 @@ namespace OATBeanCounter
 				}
 				break;
 			}
-		}
-
-		/// <summary>
-		/// Fires every time a vessel object is created.
-		/// Fires at the beginning of every scene for every vessel in the universe
-		/// </summary>
-		/// <param name="vessel">The vessel that was created</param>
-		public void vesselCreateEvent(Vessel vessel)
-		{
-//			if(vessel.vesselType == VesselType.Unknown || vessel.vesselType == VesselType.SpaceObject)
-//			{
-//				// Ignore asteroids
-//			} else {
-//				BeanCounter.LogFormatted_DebugOnly("------------- vesselCreateEvent -------------");
-//				BeanCounter.LogFormatted_DebugOnly("vesselName: {0}", vessel.vesselName);
-//				BeanCounter.LogFormatted_DebugOnly("vesselType: {0}", vessel.vesselType);
-//				BeanCounter.LogFormatted_DebugOnly("GetName(): {0}", vessel.GetName());
-//				BeanCounter.LogFormatted_DebugOnly("name: {0}", vessel.name);
-//				BeanCounter.LogFormatted_DebugOnly("RevealName(): {0}", vessel.RevealName());
-//				BeanCounter.LogFormatted_DebugOnly("Vessel state: {0}", vessel.state);
-//				BeanCounter.LogFormatted_DebugOnly("Vessel situation: {0}", vessel.situation);
-//				BeanCounter.LogFormatted_DebugOnly("Part Count: {0}", vessel.Parts.Count);
-//				BeanCounter.LogFormatted_DebugOnly("id: {0}", vessel.id);
-//				BeanCounter.LogFormatted_DebugOnly("launchTime: {0}", vessel.launchTime);
-//				BeanCounter.LogFormatted_DebugOnly("UniversalTime: {0}", HighLogic.fetch.currentGame.UniversalTime);
-//				BeanCounter.LogFormatted_DebugOnly("New launch? {0}", (HighLogic.fetch.currentGame.UniversalTime == vessel.launchTime));
-//				BeanCounter.LogFormatted_DebugOnly("Mission Time: {0}", vessel.missionTime);
-//				BeanCounter.LogFormatted_DebugOnly("Vessel root missionID: {0}", BCUtils.GetVesselMissionID(vessel));
-//				BeanCounter.LogFormatted_DebugOnly("----------- /vesselCreateEvent -------------");
-//			}
 		}
 		
 		public void vesselChangeEvent(Vessel vessel)
@@ -196,18 +219,13 @@ namespace OATBeanCounter
 			float dryCost, fuelCost, totalCost;
 			totalCost = ship.GetShipCosts (out dryCost, out fuelCost);
 
-
 			BeanCounter.LogFormatted_DebugOnly("Rollout: {0}", ship.shipName);
-			BeanCounter.LogFormatted_DebugOnly("Total Cost: {0:f2}", totalCost);
-			BeanCounter.LogFormatted_DebugOnly("Dry Cost: {0:f2}", dryCost);
-			BeanCounter.LogFormatted_DebugOnly("Fuel Cost: {0:f2}", fuelCost);
 			BeanCounter.LogFormatted_DebugOnly("launchID: {0}", HighLogic.fetch.currentGame.launchID);
-
 
 			Vessel vessel = FlightGlobals.ActiveVessel;
 			BeanCounter.LogFormatted_DebugOnly("NEW VESSEL LAUNCH DETECTED: {0}", vessel.vesselName);
 			
-			BCLaunchData launch = new BCLaunchData ();
+			BCLaunchData launch = new BCLaunchData(true);
 			launch.vesselName = vessel.vesselName;
 			launch.missionID = BCUtils.GetVesselMissionID(vessel);
 			launch.dryCost = dryCost;
@@ -219,6 +237,8 @@ namespace OATBeanCounter
 			List<BCVesselPartData> parts = new List<BCVesselPartData>();
 			float total_resource_cost = 0;
 			
+            // Iterate over each part so we can log the parts, calculate the vessel resources, and
+            // calculate the actual cost of everything
 			foreach (Part part in vessel.parts)
 			{
 				BCVesselPartData part_data = new BCVesselPartData();
@@ -240,6 +260,8 @@ namespace OATBeanCounter
 					part_resource_cost_full += (float)(res.info.unitCost * res.maxAmount);
 					part_resource_cost_actual += (float)(res.info.unitCost * res.amount);
 					
+                    // Either create a new VesselResourceData, or add to the one we already have
+                    // TODO perhaps this should be conbined in to a single static method on BCVesselResourceData?
 					BCVesselResourceData vr = resources.Find(r => r.resourceName == res.resourceName);
 					if (vr == null)
 					{
@@ -265,6 +287,19 @@ namespace OATBeanCounter
 			launch.parts = parts;
 			launch.resourceCost = total_resource_cost;
 			OATBeanCounterData.data.launches.Add(launch);
+
+            // Try to match this to the transaction
+            BCTransactionData transaction =
+                (from trans in OATBeanCounterData.data.transactions
+                 where trans.time == HighLogic.fetch.currentGame.UniversalTime
+                 && trans.reason == TransactionReasons.VesselRollout
+                 select trans).SingleOrDefault();
+            if (transaction != null)
+            {
+                BeanCounter.LogFormatted_DebugOnly("Found matching transaction for this rollout: {0}", transaction.id);
+                launch.transactionID = transaction.id;
+                transaction.dataID = launch.id;
+            }
 
 			BeanCounter.LogFormatted_DebugOnly("------------ /vesselRolloutEvent -------------");
 		}

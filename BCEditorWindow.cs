@@ -13,11 +13,18 @@ namespace OATBeanCounter
     	internal override void Awake()
     	{
             WindowRect = new Rect(0, 0, 200, 100);
-            Visible =  true;
             DragEnabled = true;
             //WindowOptions[0] = GUILayout.ExpandHeight(true);
             WindowCaption="OAT Bean Counter v"+BeanCounter.VERSION;
     	}
+
+        internal override void Update()
+        {
+            if(HighLogic.LoadedSceneIsEditor)
+            {
+                Visible = true;
+            }
+        }
 
         internal override void DrawWindow(int id)
         {
@@ -48,10 +55,6 @@ namespace OATBeanCounter
 //				GUILayout.EndVertical();
 			}
         }
-
-		internal override void Update()
-		{
-		}
 
 		// TODO: currently only works in the editor. Blank list otherwise
         List<Part> parts

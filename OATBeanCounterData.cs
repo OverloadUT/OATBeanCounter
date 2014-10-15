@@ -30,6 +30,33 @@ namespace OATBeanCounter
             if (CN != null)
                 ConfigNode.LoadObjectFromConfig(data, CN);
 		}
+
+        public static void NukeFromOrbit()
+        {
+            data = new BCDataStorage();
+        }
+    }
+
+    public abstract class BCConfigNodeStorageID : ConfigNodeStorage
+    {
+        [Persistent] public uint id = 0;
+
+        // HACK: we need to have a zero-parameter constructor or ConfigNode barfs on decode
+        public BCConfigNodeStorageID() { }
+
+        // HACK: we use this constructor when we are creating a new database entry so that it'll get a new ID
+        // only when actually logging a new thing
+        /// <summary>
+        /// Construct a new storage object with a unique ID
+        /// </summary>
+        /// <param name="newID">Set this to true if this is a new entry that needs a new ID</param>
+        public BCConfigNodeStorageID(bool newID)
+        {
+            if(newID)
+            {
+                id = ++OATBeanCounterData.data.index;
+            }
+        }
     }
 
     public class BCDataStorage : ConfigNodeStorage
@@ -51,32 +78,33 @@ namespace OATBeanCounter
 			// TODO this is probably a dumb place to do this? Should have a proper data update system, but YAGNI
 			data_version = BeanCounter.VERSION;
         }
-	}
+    }
 
 	// TODO this might need to move to some sort of larger VesselEvent type data
-	public class BCRecoveryData : ConfigNodeStorage
+    public class BCRecoveryData : BCConfigNodeStorageID
 	{
 		// TODO need resources. Might need to create a ResourceList class
-		[Persistent] public uint id = ++OATBeanCounterData.data.index;
 		[Persistent] public uint transactionID;
 		[Persistent] public float recoveryFactor = 0;
 		[Persistent] public List<uint> partIDs = new List<uint>();
 		[Persistent] public double time = HighLogic.fetch.currentGame.UniversalTime;
 
+        public BCRecoveryData() { }
+        public BCRecoveryData(bool newID) : base(newID) { }
+
 		public override void OnDecodeFromConfigNode()
-		{
+        {
 		}
 		
 		public override void OnEncodeToConfigNode()
-		{
+        {
 		}
 	}
 
 	public enum BCTransactionReasons {None};
-	
-	public class BCTransactionData : ConfigNodeStorage
+
+    public class BCTransactionData : BCConfigNodeStorageID
 	{
-		[Persistent] public uint id = ++OATBeanCounterData.data.index;
 		/// <summary>
 		/// The id of another BCData object based on the TransactionReason
 		/// For example, in a VesselRecovery transaction, this refers to a BCRecoveryData id
@@ -87,10 +115,9 @@ namespace OATBeanCounter
 		[Persistent] public double time = HighLogic.fetch.currentGame.UniversalTime;
 		[Persistent] public BCTransactionReasons otherreason = BCTransactionReasons.None;
 		[Persistent] public TransactionReasons reason = TransactionReasons.None;
-		
-		public BCTransactionData()
-		{
-		}
+
+        public BCTransactionData() { }
+        public BCTransactionData(bool newID) : base(newID) { }
 		
 		public override void OnDecodeFromConfigNode()
 		{
@@ -101,11 +128,9 @@ namespace OATBeanCounter
 		}
 	}
 
-	public class BCLaunchData : ConfigNodeStorage
+    public class BCLaunchData : BCConfigNodeStorageID
 	{
-		[Persistent] public uint id = ++OATBeanCounterData.data.index;
 		[Persistent] public uint transactionID;
-
 		[Persistent] public string vesselName = "Unknown Craft";
 		[Persistent] public uint missionID = 0;
 		[Persistent] public float dryCost = 0;
@@ -114,6 +139,9 @@ namespace OATBeanCounter
 		[Persistent] public double launchTime = HighLogic.fetch.currentGame.UniversalTime;
 		[Persistent] public List<BCVesselResourceData> resources = new List<BCVesselResourceData>();
 		[Persistent] public List<BCVesselPartData> parts = new List<BCVesselPartData>();
+
+        public BCLaunchData() { }
+        public BCLaunchData(bool newID) : base(newID) { }
 
 		public override void OnDecodeFromConfigNode()
 		{
@@ -150,6 +178,11 @@ namespace OATBeanCounter
 		/// The unique ID of this part. Comes from Part.flightID
 		/// </summary>
 		[Persistent] public uint uid = 0;
+        /// <summary>
+        /// Contains extra information about this part's destruction, or null
+        /// if this part is not destroyed
+        /// </summary>
+        [Persistent] public BCPartDestructionData destruction;
 
 		/// <summary>
 		/// Gets the total DRY cost of the part, including any module-added costs
@@ -171,6 +204,27 @@ namespace OATBeanCounter
 		{
 		}
 	}
+
+    public class BCPartDestructionData : ConfigNodeStorage
+    {
+        // TODO: record resources here?
+        /// <summary>
+        /// The time of destruction
+        /// </summary>
+        [Persistent] public double time;
+        /// <summary>
+        /// The name of the planetary body this was destroyed near
+        /// </summary>
+        [Persistent] public string body;
+
+        public override void OnDecodeFromConfigNode()
+        {
+        }
+
+        public override void OnEncodeToConfigNode()
+        {
+        }
+    }
 
 	public class BCVesselResourceData : ConfigNodeStorage
 	{
