@@ -27,7 +27,8 @@ namespace OATBeanCounter
 			GameEvents.OnFundsChanged.Add(fundsChangedEvent);
 			GameEvents.onVesselRecoveryProcessing.Add(vesselRecoveryProcessingEvent);
             GameEvents.onPartDie.Add(partDieEvent);
-
+            GameEvents.Modifiers.OnCurrencyModifierQuery.Add(currencyModifierEvent);
+            GameEvents.Modifiers.OnCurrencyModified.Add(currencyModifierEvent);
 			
 			BeanCounter.LogFormatted_DebugOnly("OATBeanCounter Events Hooked");
 
@@ -128,51 +129,81 @@ namespace OATBeanCounter
             BeanCounter.LogFormatted_DebugOnly("--------- /partDieEvent ------------");
         }
 
+        /// <summary>
+        /// Fires every time any code asks how much currency will be modified if spent/earned.
+        /// Does NOT indicate actual currency being spent or earned.
+        /// </summary>
+        /// <param name="query">The object with all of the modification info</param>
+        public void currencyModifierEvent(CurrencyModifierQuery query)
+        {
+            BeanCounter.LogFormatted_DebugOnly("--------- currencyModifierEvent ------------");
+
+            BeanCounter.LogFormatted_DebugOnly("Currency modified! Reason: {0}, Funds {1:f2}, Science {2:f2}, Rep {3:f3}",
+                query.reason.ToString(),
+                query.GetEffectDelta(Currency.Funds),
+                query.GetEffectDelta(Currency.Reputation),
+                query.GetEffectDelta(Currency.Science)
+                );
+
+            BeanCounter.LogFormatted_DebugOnly("-------- /currencyModifierEvent ------------");
+        }
+
+        public void currencyModifiedEvent(CurrencyModifierQuery query)
+        {
+            BeanCounter.LogFormatted_DebugOnly("--------- currencyModifiedEvent ------------");
+
+            BeanCounter.LogFormatted_DebugOnly("Currency modified! Reason: {0}, Funds {1:f2}, Science {2:f2}, Rep {3:f3}",
+                query.reason.ToString(),
+                query.GetEffectDelta(Currency.Funds),
+                query.GetEffectDelta(Currency.Reputation),
+                query.GetEffectDelta(Currency.Science)
+                );
+
+            BeanCounter.LogFormatted_DebugOnly("-------- /currencyModifiedEvent ------------");
+        }
+
 		public void fundsChangedEvent(double newfunds, TransactionReasons reason)
-		{
+        {
+            BeanCounter.LogFormatted_DebugOnly("--------- fundsChangedEvent ------------");
 //            BeanCounter.LogFormatted_DebugOnly("Stack Trace? {0}", System.Environment.StackTrace);
     
 			double diff = newfunds - OATBeanCounterData.data.funds;
 
 			BeanCounter.LogFormatted_DebugOnly("Funds changed. New funds: {0:f2}", newfunds);
 			BeanCounter.LogFormatted_DebugOnly("Change amount: {0:f2}", diff);
-
-            CurrencyModifierQuery mod = CurrencyModifierQuery.RunQuery(reason, (float)diff, 0, 0);
-            BeanCounter.LogFormatted_DebugOnly("Modifier: Funds: {0:f4}, Reputation: {1:f4}, Science: {2:f4}", mod.GetEffectDelta(Currency.Funds), mod.GetEffectDelta(Currency.Reputation), 
-                mod.GetEffectDelta(Currency.Science));
-
             
-
-            foreach(Strategies.DepartmentConfig dept in Strategies.StrategySystem.Instance.Departments)
-            {
-                foreach(Strategies.Strategy strat in Strategies.StrategySystem.Instance.GetStrategies(dept.Name))
-                {
-                    if(strat.IsActive)
-                    {
-                        BeanCounter.LogFormatted_DebugOnly("Active Strategy: {0}", strat.Title);
-                        BeanCounter.LogFormatted_DebugOnly("  Effects: {0}", strat.Effect);
+            // TODO figure out how to get at Strategy Effect parameters. There has to be a way.
+            // Look at Part modules that are defined by .cfg files - maybe works the same way
+            //foreach(Strategies.DepartmentConfig dept in Strategies.StrategySystem.Instance.Departments)
+            //{
+            //    foreach(Strategies.Strategy strat in Strategies.StrategySystem.Instance.GetStrategies(dept.Name))
+            //    {
+            //        if(strat.IsActive)
+            //        {
+            //            BeanCounter.LogFormatted_DebugOnly("Active Strategy: {0}", strat.Title);
+            //            BeanCounter.LogFormatted_DebugOnly("  Effects: {0}", strat.Effect);
                         
-                        foreach(Strategies.StrategyEffect effect in strat.Effects)
-                        {
-                            BeanCounter.LogFormatted_DebugOnly("  Effect Description: {0}", effect.Description);
+            //            foreach(Strategies.StrategyEffect effect in strat.Effects)
+            //            {
+            //                BeanCounter.LogFormatted_DebugOnly("  Effect Description: {0}", effect.Description);
 
-                            if (effect is Strategies.Effects.CurrencyConverter)
-                            {
-                                BeanCounter.LogFormatted_DebugOnly("  Effect is a CurrencyConverter");
-                            }
-                            else if (effect is Strategies.Effects.CurrencyOperation)
-                            {
-                                BeanCounter.LogFormatted_DebugOnly("  Effect is a CurrencyOperation");
-                            }
-                            else if (effect is Strategies.Effects.ValueModifier)
-                            {
-                                BeanCounter.LogFormatted_DebugOnly("  Effect is a ValueModifier");
-                            }
+            //                if (effect is Strategies.Effects.CurrencyConverter)
+            //                {
+            //                    BeanCounter.LogFormatted_DebugOnly("  Effect is a CurrencyConverter");
+            //                }
+            //                else if (effect is Strategies.Effects.CurrencyOperation)
+            //                {
+            //                    BeanCounter.LogFormatted_DebugOnly("  Effect is a CurrencyOperation");
+            //                }
+            //                else if (effect is Strategies.Effects.ValueModifier)
+            //                {
+            //                    BeanCounter.LogFormatted_DebugOnly("  Effect is a ValueModifier");
+            //                }
                             
-                        }
-                    }
-                }
-            }
+            //            }
+            //        }
+            //    }
+            //}
 
 			BCTransactionData transaction = new BCTransactionData(true);
 			transaction.amount = diff;
@@ -208,7 +239,8 @@ namespace OATBeanCounter
 					transaction.dataID = launch.id;
 				}
 				break;
-			}
+            }
+            BeanCounter.LogFormatted_DebugOnly("-------- /fundsChangedEvent ------------");
 		}
 		
 		public void vesselChangeEvent(Vessel vessel)
