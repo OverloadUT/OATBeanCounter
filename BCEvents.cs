@@ -130,10 +130,49 @@ namespace OATBeanCounter
 
 		public void fundsChangedEvent(double newfunds, TransactionReasons reason)
 		{
+//            BeanCounter.LogFormatted_DebugOnly("Stack Trace? {0}", System.Environment.StackTrace);
+    
 			double diff = newfunds - OATBeanCounterData.data.funds;
 
 			BeanCounter.LogFormatted_DebugOnly("Funds changed. New funds: {0:f2}", newfunds);
 			BeanCounter.LogFormatted_DebugOnly("Change amount: {0:f2}", diff);
+
+            CurrencyModifierQuery mod = CurrencyModifierQuery.RunQuery(reason, (float)diff, 0, 0);
+            BeanCounter.LogFormatted_DebugOnly("Modifier: Funds: {0:f4}, Reputation: {1:f4}, Science: {2:f4}", mod.GetEffectDelta(Currency.Funds), mod.GetEffectDelta(Currency.Reputation), 
+                mod.GetEffectDelta(Currency.Science));
+
+            
+
+            foreach(Strategies.DepartmentConfig dept in Strategies.StrategySystem.Instance.Departments)
+            {
+                foreach(Strategies.Strategy strat in Strategies.StrategySystem.Instance.GetStrategies(dept.Name))
+                {
+                    if(strat.IsActive)
+                    {
+                        BeanCounter.LogFormatted_DebugOnly("Active Strategy: {0}", strat.Title);
+                        BeanCounter.LogFormatted_DebugOnly("  Effects: {0}", strat.Effect);
+                        
+                        foreach(Strategies.StrategyEffect effect in strat.Effects)
+                        {
+                            BeanCounter.LogFormatted_DebugOnly("  Effect Description: {0}", effect.Description);
+
+                            if (effect is Strategies.Effects.CurrencyConverter)
+                            {
+                                BeanCounter.LogFormatted_DebugOnly("  Effect is a CurrencyConverter");
+                            }
+                            else if (effect is Strategies.Effects.CurrencyOperation)
+                            {
+                                BeanCounter.LogFormatted_DebugOnly("  Effect is a CurrencyOperation");
+                            }
+                            else if (effect is Strategies.Effects.ValueModifier)
+                            {
+                                BeanCounter.LogFormatted_DebugOnly("  Effect is a ValueModifier");
+                            }
+                            
+                        }
+                    }
+                }
+            }
 
 			BCTransactionData transaction = new BCTransactionData(true);
 			transaction.amount = diff;
