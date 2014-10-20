@@ -14,6 +14,9 @@ namespace OATBeanCounter
         public static BCEvents instance = new BCEvents();
 		public bool eventsAdded;
 
+        public double currencyModTime;
+        public List<CurrencyModifierQuery> lastCurrencyMods = new List<CurrencyModifierQuery>();
+
         public BCEvents()
         {
             eventsAdded = false;
@@ -27,8 +30,7 @@ namespace OATBeanCounter
 			GameEvents.OnFundsChanged.Add(fundsChangedEvent);
 			GameEvents.onVesselRecoveryProcessing.Add(vesselRecoveryProcessingEvent);
             GameEvents.onPartDie.Add(partDieEvent);
-            GameEvents.Modifiers.OnCurrencyModifierQuery.Add(currencyModifierEvent);
-            GameEvents.Modifiers.OnCurrencyModified.Add(currencyModifierEvent);
+            GameEvents.Modifiers.OnCurrencyModified.Add(currencyModifiedEvent);
 			
 			BeanCounter.LogFormatted_DebugOnly("OATBeanCounter Events Hooked");
 
@@ -134,20 +136,6 @@ namespace OATBeanCounter
         /// Does NOT indicate actual currency being spent or earned.
         /// </summary>
         /// <param name="query">The object with all of the modification info</param>
-        public void currencyModifierEvent(CurrencyModifierQuery query)
-        {
-            BeanCounter.LogFormatted_DebugOnly("--------- currencyModifierEvent ------------");
-
-            BeanCounter.LogFormatted_DebugOnly("Currency modified! Reason: {0}, Funds {1:f2}, Science {2:f2}, Rep {3:f3}",
-                query.reason.ToString(),
-                query.GetEffectDelta(Currency.Funds),
-                query.GetEffectDelta(Currency.Reputation),
-                query.GetEffectDelta(Currency.Science)
-                );
-
-            BeanCounter.LogFormatted_DebugOnly("-------- /currencyModifierEvent ------------");
-        }
-
         public void currencyModifiedEvent(CurrencyModifierQuery query)
         {
             BeanCounter.LogFormatted_DebugOnly("--------- currencyModifiedEvent ------------");
@@ -159,9 +147,23 @@ namespace OATBeanCounter
                 query.GetEffectDelta(Currency.Science)
                 );
 
+            if (currencyModTime != HighLogic.CurrentGame.UniversalTime)
+            {
+                currencyModTime = HighLogic.CurrentGame.UniversalTime;
+                lastCurrencyMods = new List<CurrencyModifierQuery>();
+            }
+
+            lastCurrencyMods.Add(query);
+
             BeanCounter.LogFormatted_DebugOnly("-------- /currencyModifiedEvent ------------");
         }
 
+        /// <summary>
+        /// Fires every time our Funds change. Logs the transaction, and does some magic to determine
+        /// if the transaction was modified by an active Strategy, and logs that as well.
+        /// </summary>
+        /// <param name="newfunds">The new total Funds balance.</param>
+        /// <param name="reason">The reason this change happened.</param>
 		public void fundsChangedEvent(double newfunds, TransactionReasons reason)
         {
             BeanCounter.LogFormatted_DebugOnly("--------- fundsChangedEvent ------------");
@@ -171,6 +173,35 @@ namespace OATBeanCounter
 
 			BeanCounter.LogFormatted_DebugOnly("Funds changed. New funds: {0:f2}", newfunds);
 			BeanCounter.LogFormatted_DebugOnly("Change amount: {0:f2}", diff);
+
+            BCTransactionData transaction = new BCTransactionData(true);
+            OATBeanCounterData.data.transactions.Add(transaction);
+            transaction.time = HighLogic.fetch.currentGame.UniversalTime;
+            transaction.reason = reason;
+            transaction.amount = diff;
+            transaction.balance = newfunds;
+
+            if (currencyModTime == HighLogic.CurrentGame.UniversalTime)
+            {
+                CurrencyModifierQuery modquery = lastCurrencyMods.Find(
+                    q => q.GetInput(Currency.Funds) + q.GetEffectDelta(Currency.Funds) == diff);
+
+                if (modquery != null && modquery.GetEffectDelta(Currency.Funds) != 0)
+                {
+                    float delta = modquery.GetEffectDelta(Currency.Funds);
+                    float queryinput = modquery.GetInput(Currency.Funds);
+                    transaction.amount = queryinput;
+                    transaction.balance = OATBeanCounterData.data.funds - delta;
+
+                    BCTransactionData modtrans = new BCTransactionData(true);
+                    OATBeanCounterData.data.transactions.Add(transaction);
+                    modtrans.time = HighLogic.fetch.currentGame.UniversalTime;
+                    modtrans.reason = TransactionReasons.Strategies;
+                    modtrans.balance = newfunds;
+                    modtrans.amount = delta;
+                }
+            }
+            OATBeanCounterData.data.funds = newfunds;
             
             // TODO figure out how to get at Strategy Effect parameters. There has to be a way.
             // Look at Part modules that are defined by .cfg files - maybe works the same way
@@ -204,14 +235,6 @@ namespace OATBeanCounter
             //        }
             //    }
             //}
-
-			BCTransactionData transaction = new BCTransactionData(true);
-			transaction.amount = diff;
-			transaction.balance = newfunds;
-			transaction.time = HighLogic.fetch.currentGame.UniversalTime;
-			transaction.reason = reason;
-			OATBeanCounterData.data.transactions.Add(transaction);
-			OATBeanCounterData.data.funds = newfunds;
 
 			// TODO this is awful
             // Also, it doesn't work anymore? This used to fire after the required events, but now it is before
