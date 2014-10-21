@@ -55,6 +55,7 @@ namespace OATBeanCounter
 
         private BCEditorWindow editorWindow;
         private BCDebugWindow debugWindow;
+        private BCProfitLossWindow profitlossWindow;
 
 		internal override void Awake()
 		{
@@ -66,6 +67,7 @@ namespace OATBeanCounter
 
             editorWindow = gameObject.AddComponent<BCEditorWindow>();
             debugWindow = gameObject.AddComponent<BCDebugWindow>();
+            profitlossWindow = gameObject.AddComponent<BCProfitLossWindow>();
             RenderingManager.AddToPostDrawQueue(1, DrawGUI);
 		}
 		

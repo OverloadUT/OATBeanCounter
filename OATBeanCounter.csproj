@@ -59,6 +59,7 @@
     <Compile Include="BCDebugWindow.cs" />
     <Compile Include="BCEditorWindow.cs" />
     <Compile Include="BCEvents.cs" />
+    <Compile Include="BCProfitLossWindow.cs" />
     <Compile Include="BCUtils.cs" />
     <Compile Include="BeanCounter.cs" />
     <Compile Include="KSPPluginFramework\ConfigNodeStorage.cs" />

@@ -65,6 +65,8 @@ namespace OATBeanCounter
 		[Persistent] public List<BCLaunchData> launches = new List<BCLaunchData>();
 		[Persistent] public List<BCTransactionData> transactions = new List<BCTransactionData>();
 		[Persistent] public List<BCRecoveryData> recoveries = new List<BCRecoveryData>();
+        // TODO: Figure out the best way to record initial funds
+        // Probably want an initial transaction for starting funds
 		[Persistent] public double funds = 0;
 
 		[Persistent] public uint index = 0;
