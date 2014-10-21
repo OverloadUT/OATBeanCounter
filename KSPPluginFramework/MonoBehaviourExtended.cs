@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 using KSP;
 using UnityEngine;
@@ -408,10 +409,14 @@ namespace OATBeanCounter
         internal static void LogFormatted(String Message, params object[] strParams)
         {
             Message = String.Format(Message, strParams);                  // This fills the params into the message
-            String strMessageLine = String.Format("{0},{2},{1}",
-                DateTime.Now, Message,
-                _AssemblyName);                                           // This adds our standardised wrapper to each line
-            UnityEngine.Debug.Log(strMessageLine);                        // And this puts it in the log
+
+            foreach (String line in Regex.Split(Message, "\r\n"))
+            {
+                String strMessageLine = String.Format("{0},{2},{1}",
+                    DateTime.Now, line,
+                    _AssemblyName);                                           // This adds our standardised wrapper to each line
+                UnityEngine.Debug.Log(strMessageLine);                        // And this puts it in the log
+            }
         }
 
         #endregion
