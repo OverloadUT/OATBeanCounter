@@ -132,8 +132,7 @@ namespace OATBeanCounter
         }
 
         /// <summary>
-        /// Fires every time any code asks how much currency will be modified if spent/earned.
-        /// Does NOT indicate actual currency being spent or earned.
+        /// Fires every time a currency transaction is modified by a CurrencyModifierQuery object
         /// </summary>
         /// <param name="query">The object with all of the modification info</param>
         public void currencyModifiedEvent(CurrencyModifierQuery query)
@@ -146,6 +145,8 @@ namespace OATBeanCounter
                 query.GetEffectDelta(Currency.Reputation),
                 query.GetEffectDelta(Currency.Science)
                 );
+
+            //BeanCounter.LogFormatted_DebugOnly("Stack Trace: {0}", System.Environment.StackTrace);
 
             if (currencyModTime != HighLogic.CurrentGame.UniversalTime)
             {
@@ -166,6 +167,9 @@ namespace OATBeanCounter
         /// <param name="reason">The reason this change happened.</param>
 		public void fundsChangedEvent(double newfunds, TransactionReasons reason)
         {
+            // TODO: funds CAN change without this event firing. WHAT TO DO?????
+
+
             BeanCounter.LogFormatted_DebugOnly("--------- fundsChangedEvent ------------");
 //            BeanCounter.LogFormatted_DebugOnly("Stack Trace? {0}", System.Environment.StackTrace);
     
@@ -183,18 +187,23 @@ namespace OATBeanCounter
 
             if (currencyModTime == HighLogic.CurrentGame.UniversalTime)
             {
-                CurrencyModifierQuery modquery = lastCurrencyMods.Find(
-                    q => q.GetInput(Currency.Funds) + q.GetEffectDelta(Currency.Funds) == diff);
+                BeanCounter.LogFormatted_DebugOnly("  Checking cached queries. Count: {0}", lastCurrencyMods.Count());
 
-                if (modquery != null && modquery.GetEffectDelta(Currency.Funds) != 0)
+                // We now take in to account EVERY modifierquery run on this frame.
+                //CurrencyModifierQuery modquery = lastCurrencyMods.Find(
+                //    q => q.GetInput(Currency.Funds) + q.GetEffectDelta(Currency.Funds) == diff);
+
+                if (lastCurrencyMods.Count() > 0)
                 {
-                    float delta = modquery.GetEffectDelta(Currency.Funds);
-                    float queryinput = modquery.GetInput(Currency.Funds);
-                    transaction.amount = queryinput;
+                    // TODO: Record the reason for this transaction in addition to it being a strategy mod
+                    float delta = lastCurrencyMods.Sum(q => q.GetEffectDelta(Currency.Funds));
+                    double realcost = diff - delta;
+                    BeanCounter.LogFormatted_DebugOnly("  Total modified by queries: Delta: {0}, Real Cost: {1}", delta, realcost);
+                    transaction.amount = realcost;
                     transaction.balance = OATBeanCounterData.data.funds - delta;
 
                     BCTransactionData modtrans = new BCTransactionData(true);
-                    OATBeanCounterData.data.transactions.Add(transaction);
+                    OATBeanCounterData.data.transactions.Add(modtrans);
                     modtrans.time = HighLogic.fetch.currentGame.UniversalTime;
                     modtrans.reason = TransactionReasons.Strategies;
                     modtrans.balance = newfunds;
@@ -203,8 +212,8 @@ namespace OATBeanCounter
             }
             OATBeanCounterData.data.funds = newfunds;
             
-            // TODO figure out how to get at Strategy Effect parameters. There has to be a way.
-            // Look at Part modules that are defined by .cfg files - maybe works the same way
+             //TODO figure out how to get at Strategy Effect parameters. There has to be a way.
+             //Look at Part modules that are defined by .cfg files - maybe works the same way
             //foreach(Strategies.DepartmentConfig dept in Strategies.StrategySystem.Instance.Departments)
             //{
             //    foreach(Strategies.Strategy strat in Strategies.StrategySystem.Instance.GetStrategies(dept.Name))
@@ -385,7 +394,7 @@ namespace OATBeanCounter
             // Try to match this to the transaction
             BCTransactionData transaction =
                 (from trans in OATBeanCounterData.data.transactions
-                 where trans.time == HighLogic.fetch.currentGame.UniversalTime
+                 where trans.time == HighLogic.CurrentGame.UniversalTime
                  && trans.reason == TransactionReasons.VesselRollout
                  select trans).SingleOrDefault();
             if (transaction != null)
