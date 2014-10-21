@@ -5,6 +5,7 @@
 bin/
 *.sublime-project
 *.sublime-workspace
+output_grep.log
 
 # Office temp files
 ~$*
