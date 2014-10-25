@@ -62,6 +62,7 @@
     <Compile Include="BCProfitLossWindow.cs" />
     <Compile Include="BCUtils.cs" />
     <Compile Include="BeanCounter.cs" />
+    <Compile Include="BCGUI.cs" />
     <Compile Include="KSPPluginFramework\ConfigNodeStorage.cs" />
     <Compile Include="KSPPluginFramework\ExtensionsUnity.cs" />
     <Compile Include="KSPPluginFramework\MonoBehaviourExtended.cs" />
