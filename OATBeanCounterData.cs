@@ -103,7 +103,7 @@ namespace OATBeanCounter
 		}
 	}
 
-	public enum BCTransactionReasons {None};
+	public enum BCTransactionReasons {None, Parts, Fuel, LifeSupport, Resources};
 
     public class BCTransactionData : BCConfigNodeStorageID
 	{
