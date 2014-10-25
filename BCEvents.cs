@@ -14,8 +14,8 @@ namespace OATBeanCounter
         public static BCEvents instance = new BCEvents();
 		public bool eventsAdded;
 
-        public double currencyModTime;
-        public List<CurrencyModifierQuery> lastCurrencyMods = new List<CurrencyModifierQuery>();
+        protected double currencyModTime;
+        protected List<CurrencyModifierQuery> lastCurrencyMods = new List<CurrencyModifierQuery>();
 
         public BCEvents()
         {
@@ -65,7 +65,7 @@ namespace OATBeanCounter
 				from part in launch.parts
 				where recovered_part_ids.Contains(part.uid)
 				select part;
-
+            
 			foreach(BCVesselPartData partdata in recoveredparts)
 			{
 				BeanCounter.LogFormatted_DebugOnly("Flagging part as recovered: {0} - {1}", partdata.partName, partdata.uid);
@@ -110,7 +110,7 @@ namespace OATBeanCounter
                 return;
             }
 
-            // Get the launch that this part was from
+            // Get the VesselPartData for the part that died
             BCVesselPartData partdata =
                 (from partq in launch.parts
                  where partq.uid == part.flightID
@@ -211,39 +211,6 @@ namespace OATBeanCounter
                 }
             }
             OATBeanCounterData.data.funds = newfunds;
-            
-             //TODO figure out how to get at Strategy Effect parameters. There has to be a way.
-             //Look at Part modules that are defined by .cfg files - maybe works the same way
-            //foreach(Strategies.DepartmentConfig dept in Strategies.StrategySystem.Instance.Departments)
-            //{
-            //    foreach(Strategies.Strategy strat in Strategies.StrategySystem.Instance.GetStrategies(dept.Name))
-            //    {
-            //        if(strat.IsActive)
-            //        {
-            //            BeanCounter.LogFormatted_DebugOnly("Active Strategy: {0}", strat.Title);
-            //            BeanCounter.LogFormatted_DebugOnly("  Effects: {0}", strat.Effect);
-                        
-            //            foreach(Strategies.StrategyEffect effect in strat.Effects)
-            //            {
-            //                BeanCounter.LogFormatted_DebugOnly("  Effect Description: {0}", effect.Description);
-
-            //                if (effect is Strategies.Effects.CurrencyConverter)
-            //                {
-            //                    BeanCounter.LogFormatted_DebugOnly("  Effect is a CurrencyConverter");
-            //                }
-            //                else if (effect is Strategies.Effects.CurrencyOperation)
-            //                {
-            //                    BeanCounter.LogFormatted_DebugOnly("  Effect is a CurrencyOperation");
-            //                }
-            //                else if (effect is Strategies.Effects.ValueModifier)
-            //                {
-            //                    BeanCounter.LogFormatted_DebugOnly("  Effect is a ValueModifier");
-            //                }
-                            
-            //            }
-            //        }
-            //    }
-            //}
 
 			// TODO this is awful
             // Also, it doesn't work anymore? This used to fire after the required events, but now it is before
